@@ -1,5 +1,5 @@
-#ifndef ADMCONTEXT_HPP_
-#define ADMCONTEXT_HPP_
+#ifndef CONTEXT_HPP_
+#define CONTEXT_HPP_
 
 #include <krb5.h>
 #include <heimdal/kadm5/admin.h>
@@ -9,12 +9,12 @@
 namespace KAdm5
 {
 
-class AdmContext
+class Context
 {
 public:
-	AdmContext(krb5_context, const char* =NULL, const char* =NULL, const int =0);
-	~AdmContext();
+	~Context();
 
+	/* KAdmin library functions */
 	void chpassPrincipal(krb5_principal, char*) const;
 	void chpassPrincipal(krb5_principal, int, krb5_key_data*) const;
 	
@@ -34,12 +34,23 @@ public:
 	void modifyPrincipal(kadm5_principal_ent_t, u_int32_t) const;
 	void randkeyPrincipal(krb5_principal, krb5_keyblock**, int*) const;
 	void renamePrincipal(krb5_principal, krb5_principal) const;
+
+	/* Kerberos library functions */
+	void parseName(const char*, krb5_principal*) const;
+	void unparseName(krb5_const_principal, char**) const;
+	krb5_realm* princRealm(krb5_principal) const;
+	void makePrincipal(krb5_principal*, krb5_const_realm, const char*) const;
 	
-private:
+	void freePrincipal(krb5_principal) const;
+
+protected:
+	Context(const char* =NULL, const char* =NULL, const int =0);
+	
 	kadm5_config_params* _config_params;
+	krb5_context _krb_context;
 	void* _kadm_handle;
 };
 
 }
 
-#endif /*ADMCONTEXT_HPP_*/
+#endif /*CONTEXT_HPP_*/

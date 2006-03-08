@@ -2,59 +2,62 @@
 
 #include <memory>
 
+#include "PasswordContext.hpp"
+
 namespace KAdm5
 {
 using std::auto_ptr;
 
 
-Connection::Connection(const string& realm, const string& host, const int port)
-	:	_krbContext(NULL),
-		_admContext(NULL)
-{
-	const char* r = NULL;
-	const char* h = NULL;
+Connection* Connection::fromPassword(
+	const string& password,
+	const string& client,
+	const string& realm,
+	const string& host,
+	const int port
+) {
+	Context* ctx = NULL;
+
+	const char* c = client.empty() ? NULL : client.c_str();
+	const char* r = realm.empty() ? NULL : realm.c_str();
+	const char* h = host.empty() ? NULL : host.c_str();
 	
-	_krbContext = new KrbContext();
-//	try {
-		if (!realm.empty()) {
-			r = realm.c_str();
-		}
-		if (!host.empty()) {
-			h = host.c_str();
-		}
-		_admContext = _krbContext->createAdmContext(r, h, port);
-//	}
-//	catch (...) {
-//		// Clean up if anything goes wrong.
-//		delete _krbContext;
-//		throw;
-//	}
+	ctx = new PasswordContext(password.c_str(), c, r, h, port);
+	
+	return new Connection(ctx);
+}
+
+
+Connection::Connection(Context* context)
+	:	_context(context)
+{
 }
 
 
 Connection::~Connection()
 {
-	// Pointers are NULL initialized so delete always works.
-	delete _admContext;
-	delete _krbContext;
+	delete _context;
 }
 
 
 Principal* Connection::createPrincipal(const string& name) const
 {
-	auto_ptr< vector<string> > existing( listPrincipals(name) );
+	Principal* p = new Principal(name, _context);
+	
+	auto_ptr< vector<string> > existing( listPrincipals(p->getId()) );
 	// TODO Differentiate between bad name and already existing principal
 	if (existing->size() != 0) {
+		delete p;
 		throw PrincipalError(KADM5_BAD_PRINCIPAL);
 	}
 	
-	return new Principal(name, _krbContext, _admContext);
+	return p;
 }
 
 
 void Connection::deletePrincipal(Principal* principal) const
 {
-//	_admContext->deletePrincipal(principal->)
+//	_context->deletePrincipal(principal->)
 }
 
 
@@ -64,11 +67,7 @@ Principal* Connection::getPrincipal(const string& name) const
 	
 	// Unambiguous description suffices.
 	if (candidates->size() == 1) {
-		return new Principal(
-			(*candidates)[0],
-			_krbContext,
-			_admContext
-		);
+		return new Principal((*candidates)[0], _context);
 	} else if (candidates->size() < 1) {
 		throw UnknownPrincipalError(KADM5_UNK_PRINC);
 	} else {
@@ -87,7 +86,7 @@ std::vector<Principal*>* Connection::getPrincipals(const string& filter) const
 		it != names->end();
 		it++
 	) {
-		ret->push_back(new Principal(*it, _krbContext, _admContext));
+		ret->push_back(new Principal(*it, _context));
 	}
 	
 	return ret;
@@ -105,14 +104,14 @@ std::vector<string>* Connection::listPrincipals(const string& filter) const
 	}
 	
 	try {
-		_admContext->getPrincipals(filter.c_str(), &list, &count);
+		_context->getPrincipals(filter.c_str(), &list, &count);
 		
 		// Initialize vector with the list of principal names
 		// (use char** pointer as iterator).
 		ret = new vector<string>(list, list + count);
 	} catch (...) {
 		if (list) {
-			_admContext->freeNameList(list, &count);
+			_context->freeNameList(list, &count);
 		}
 		delete ret;
 		throw;
@@ -126,7 +125,7 @@ bool Connection::hasPrivilege(u_int32_t privilegeFlags) const
 {
 	u_int32_t p;
 	
-	_admContext->getPrivs(&p);
+	_context->getPrivs(&p);
 	
 	return (privilegeFlags & p) == privilegeFlags;
 }

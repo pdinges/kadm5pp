@@ -5,8 +5,7 @@
 %{
 
 #include "Error.hpp"
-#include "AdmContext.hpp"
-#include "KrbContext.hpp"
+#include "Context.hpp"
 #include "Principal.hpp"
 #include "Connection.hpp"
 
@@ -56,7 +55,6 @@ typedef	int int32_t;
 typedef	unsigned int u_int32_t;
 
 %include "Error.hpp"
-%include "AdmContext.hpp"
-%include "KrbContext.hpp"
+%include "Context.hpp"
 %include "Principal.hpp"
 %include "Connection.hpp"

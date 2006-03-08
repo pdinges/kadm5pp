@@ -1,5 +1,5 @@
-#ifndef CONTEXT_HPP_
-#define CONTEXT_HPP_
+#ifndef CONNECTION_HPP_
+#define CONNECTION_HPP_
 
 #include <string>
 #include <vector>
@@ -8,8 +8,7 @@
 #include <heimdal/kadm5/admin.h>
 
 #include "Error.hpp"
-#include "KrbContext.hpp"
-#include "AdmContext.hpp"
+#include "Context.hpp"
 #include "Principal.hpp"
 
 namespace KAdm5
@@ -20,7 +19,11 @@ using std::vector;
 class Connection
 {
 public:
-	Connection(const string& ="", const string& ="", const int =0);
+	static Connection* fromPassword(const string&, const string& ="", const string& ="", const string& ="", const int =0);
+//	static Connection* fromKeytab(const string&, const string& ="", const string& ="", const string& ="", const int =0);
+//	static Connection* fromCredentialCache(const string& ="", const string& ="", const string& ="", const string& ="", const int =0);
+	
+	// TODO Add copy constructor and assignment
 	~Connection();
 	
 	Principal* createPrincipal(const string&) const;
@@ -41,11 +44,11 @@ public:
 	bool mayAll() const { return hasPrivilege(KADM5_PRIV_ALL); }
 	
 private:
+	Connection(Context*);
 	bool hasPrivilege(u_int32_t) const;
 
-	KrbContext* _krbContext;
-	AdmContext* _admContext;
+	Context* _context;
 };
 
 }
-#endif /*CONTEXT_HPP_*/
+#endif /*CONNECTION_HPP_*/

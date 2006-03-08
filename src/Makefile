@@ -1,4 +1,4 @@
-objects = Error.o KrbContext.o AdmContext.o Connection.o Principal.o
+objects = Error.o Context.o PasswordContext.o Connection.o Principal.o
 
 .PHONY: clean
 

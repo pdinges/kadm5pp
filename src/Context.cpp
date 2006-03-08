@@ -1,12 +1,13 @@
-#include "AdmContext.hpp"
+#include "Context.hpp"
 
 #include <cstring>
 
 namespace KAdm5
 {
 
-AdmContext::AdmContext(krb5_context context, const char* realm, const char* host, const int port)
+Context::Context(const char* realm, const char* host, const int port)
 	:	_config_params(NULL),
+		_krb_context(NULL),
 		_kadm_handle(NULL)
 {
 	int n = 0;
@@ -43,54 +44,40 @@ AdmContext::AdmContext(krb5_context context, const char* realm, const char* host
 	
 		_config_params = c;
 		
-		
-		// Create server handle.		
-		// TODO Use credentials cache
 		Error::checkReturnVal(
-			kadm5_init_with_creds_ctx(
-				context,
-				NULL,
-				NULL,
-				KADM5_ADMIN_SERVICE,
-				_config_params,
-				0,
-				0,
-				&_kadm_handle
-			)
-//			kadm5_init_with_password_ctx(
-//				context,
-//				NULL,
-//				NULL,
-//				KADM5_ADMIN_SERVICE,
-//				_config_params,
-//				0,
-//				0,
-//				&_kadm_handle
-//			)
+			krb5_init_context(&_krb_context)
 		);
+		if (c->realm) {
+			krb5_set_default_realm(_krb_context, c->realm);
+		}
+		
 	}
 	catch (...) {
 		// In case of an emergency, use destructor to clean up.
-		this->~AdmContext();
+		this->~Context();
 		throw;
 	}
 }
 
 
-AdmContext::~AdmContext()
+Context::~Context()
 {
+	if (_kadm_handle) {
+		kadm5_destroy(_kadm_handle);
+	}
+
+	if (_krb_context) {
+		krb5_free_context(_krb_context);
+	}
+	
 	// Unconditional delete works because all values are NULL initialized.
 	delete _config_params->realm;
 	delete _config_params->admin_server;
 	delete _config_params;
-	
-	if (_kadm_handle) {
-		kadm5_destroy(_kadm_handle);
-	}
 }
 
 
-void AdmContext::chpassPrincipal(krb5_principal principal, char* password) const
+void Context::chpassPrincipal(krb5_principal principal, char* password) const
 {
 	Error::checkReturnVal(
 		kadm5_chpass_principal(
@@ -102,7 +89,7 @@ void AdmContext::chpassPrincipal(krb5_principal principal, char* password) const
 }
 
 
-void AdmContext::chpassPrincipal(krb5_principal principal, int keyCount, krb5_key_data* keyData) const
+void Context::chpassPrincipal(krb5_principal principal, int keyCount, krb5_key_data* keyData) const
 {
 	Error::checkReturnVal(
 		kadm5_chpass_principal_with_key(
@@ -115,7 +102,7 @@ void AdmContext::chpassPrincipal(krb5_principal principal, int keyCount, krb5_ke
 }
 
 
-void AdmContext::createPrincipal(kadm5_principal_ent_t principal, u_int32_t mask, char* password) const
+void Context::createPrincipal(kadm5_principal_ent_t principal, u_int32_t mask, char* password) const
 {
 	Error::checkReturnVal(
 		kadm5_create_principal(
@@ -128,7 +115,7 @@ void AdmContext::createPrincipal(kadm5_principal_ent_t principal, u_int32_t mask
 }
 
 
-void AdmContext::deletePrincipal(krb5_principal principal) const
+void Context::deletePrincipal(krb5_principal principal) const
 {
 	Error::checkReturnVal(
 		kadm5_delete_principal(_kadm_handle, principal)
@@ -136,32 +123,32 @@ void AdmContext::deletePrincipal(krb5_principal principal) const
 }
 
 
-void AdmContext::flush() const
+void Context::flush() const
 {
 	Error::checkReturnVal(
 		kadm5_flush(_kadm_handle)
 	);
 }
 
-void AdmContext::freeKeyData(int16_t* keyCount, krb5_key_data* keyData) const
+void Context::freeKeyData(int16_t* keyCount, krb5_key_data* keyData) const
 {
 	kadm5_free_key_data(_kadm_handle, keyCount, keyData);
 }
 
 
-void AdmContext::freeNameList(char** list, int* count) const
+void Context::freeNameList(char** list, int* count) const
 {
 	kadm5_free_name_list(_kadm_handle, list, count);
 }
 
 
-void AdmContext::freePrincipalEnt(kadm5_principal_ent_t principal) const
+void Context::freePrincipalEnt(kadm5_principal_ent_t principal) const
 {
 	kadm5_free_principal_ent(_kadm_handle, principal);
 }
 
 
-void AdmContext::getPrincipal(krb5_principal principal, kadm5_principal_ent_t output, u_int32_t mask) const
+void Context::getPrincipal(krb5_principal principal, kadm5_principal_ent_t output, u_int32_t mask) const
 {
 	Error::checkReturnVal(
 		kadm5_get_principal(
@@ -174,7 +161,7 @@ void AdmContext::getPrincipal(krb5_principal principal, kadm5_principal_ent_t ou
 }
 
 
-void AdmContext::getPrincipals(const char* filter, char*** nameList, int* nameCount) const
+void Context::getPrincipals(const char* filter, char*** nameList, int* nameCount) const
 {
 	Error::checkReturnVal(
 		kadm5_get_principals(
@@ -187,14 +174,14 @@ void AdmContext::getPrincipals(const char* filter, char*** nameList, int* nameCo
 }
 
 
-void AdmContext::getPrivs(u_int32_t* privileges) const
+void Context::getPrivs(u_int32_t* privileges) const
 {
 	Error::checkReturnVal(
 		kadm5_get_privs(_kadm_handle, privileges)
 	);
 }
 
-void AdmContext::modifyPrincipal(kadm5_principal_ent_t principal, u_int32_t mask) const
+void Context::modifyPrincipal(kadm5_principal_ent_t principal, u_int32_t mask) const
 {
 	Error::checkReturnVal(
 		kadm5_modify_principal(_kadm_handle, principal, mask)
@@ -202,7 +189,7 @@ void AdmContext::modifyPrincipal(kadm5_principal_ent_t principal, u_int32_t mask
 }
 
 
-void AdmContext::randkeyPrincipal(krb5_principal principal, krb5_keyblock** newKeyData, int* keyCount) const
+void Context::randkeyPrincipal(krb5_principal principal, krb5_keyblock** newKeyData, int* keyCount) const
 {
 	Error::checkReturnVal(
 		kadm5_randkey_principal(
@@ -215,11 +202,47 @@ void AdmContext::randkeyPrincipal(krb5_principal principal, krb5_keyblock** newK
 }
 
 
-void AdmContext::renamePrincipal(krb5_principal source, krb5_principal target) const
+void Context::renamePrincipal(krb5_principal source, krb5_principal target) const
 {
 	Error::checkReturnVal(
 		kadm5_rename_principal(_kadm_handle, source, target)
 	);
+}
+
+
+void Context::parseName(const char* name, krb5_principal* principal) const
+{
+	Error::checkReturnVal(
+		krb5_parse_name(_krb_context, name, principal)
+	);
+}
+
+
+void Context::unparseName(krb5_const_principal principal, char** name) const
+{
+	Error::checkReturnVal(
+		krb5_unparse_name(_krb_context, principal, name)
+	);
+}
+
+
+krb5_realm* Context::princRealm(krb5_principal principal) const
+{
+	return krb5_princ_realm(_krb_context, principal);
+}
+
+// TODO Make argument list variable to match library declaration.
+void Context::makePrincipal(krb5_principal* principal, krb5_const_realm realm, const char* name) const
+{
+	Error::checkReturnVal(
+		krb5_make_principal(_krb_context, principal, realm, name, NULL)
+	);
+}
+
+
+void Context::freePrincipal(krb5_principal principal) const
+{
+	krb5_free_principal(_krb_context, principal);
 }
 
 

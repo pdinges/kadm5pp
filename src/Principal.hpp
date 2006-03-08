@@ -4,8 +4,7 @@
 #include <string>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-#include "KrbContext.hpp"
-#include "AdmContext.hpp"
+#include "Context.hpp"
 
 
 namespace KAdm5
@@ -16,7 +15,7 @@ using std::string;
 class Principal
 {
 public:
-	Principal(const string&, KrbContext*, AdmContext*);
+	Principal(const string&, Context*);
 	~Principal();
 
 	bool existsOnServer() throw(Error);
@@ -68,8 +67,7 @@ private:
 	void applyCreate();
 	void applyRename();
 
-	KrbContext* _krbContext;
-	AdmContext* _admContext;
+	Context* _context;
 	kadm5_principal_ent_t _data;
 	krb5_principal _id;	// The kadmind knows this Principal under this name.
 	bool _loaded;

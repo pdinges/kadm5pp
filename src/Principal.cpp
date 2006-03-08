@@ -3,14 +3,15 @@
 #include <memory>
 #include <boost/date_time/gregorian/gregorian.hpp>
 
+#include <heimdal/kadm5/admin.h>
+
 namespace KAdm5
 {
 using std::auto_ptr;
 
 
-Principal::Principal(const string& name, KrbContext* krbContext, AdmContext* admContext) :
-	_krbContext(krbContext),
-	_admContext(admContext),
+Principal::Principal(const string& name, Context* context) :
+	_context(context),
 	_data(NULL),
 	_id(NULL),
 	_loaded(false),
@@ -21,7 +22,8 @@ Principal::Principal(const string& name, KrbContext* krbContext, AdmContext* adm
 	_data = new kadm5_principal_ent_rec;
 	memset(_data, 0, sizeof(kadm5_principal_ent_rec));
 	
-	krbContext->parseName(name.c_str(), &_id);
+	// TODO Use makePrincipal here
+	context->parseName(name.c_str(), &_id);
 }
 
 
@@ -29,10 +31,10 @@ Principal::~Principal()
 {
 	if (_data) {
 		if (_data->principal) {
-			_krbContext->freePrincipal(_data->principal);
+			_context->freePrincipal(_data->principal);
 		}
 		// FIXME Causes double free error?
-//		_admContext->freePrincipalEnt(_data);
+//		_context->freePrincipalEnt(_data);
 	}
 }
 
@@ -41,7 +43,7 @@ string Principal::getId()
 {
 	char* id = NULL;
 
-	_krbContext->unparseName(_id, &id);
+	_context->unparseName(_id, &id);
 	string ret(id);
 	delete id;
 
@@ -87,7 +89,7 @@ string Principal::getName()
 	
 	if (_data->principal) {
 		try {
-			_krbContext->unparseName(_data->principal, &name);
+			_context->unparseName(_data->principal, &name);
 			string ret(name);
 			delete name;
 			
@@ -107,10 +109,11 @@ void Principal::setName(const string& name)
 	krb5_principal p = NULL;
 	
 	if (_data->principal) {
-		_krbContext->freePrincipal(_data->principal);
+		_context->freePrincipal(_data->principal);
 	}
 	
-	_krbContext->parseName(name.c_str(), &p);
+	// TODO Maybe use makePrincipal?
+	_context->parseName(name.c_str(), &p);
 	_data->principal = p;
 	_modifiedMask |= KADM5_PRINCIPAL;
 }
@@ -158,8 +161,8 @@ Principal* Principal::getModifier()
 	Principal* ret = NULL;
 	
 	if (existsOnServer()) {
-		_krbContext->unparseName(_data->mod_name, &name);
-		ret = new Principal(name, _krbContext, _admContext);
+		_context->unparseName(_data->mod_name, &name);
+		ret = new Principal(name, _context);
 		delete name;
 		
 		return ret;
@@ -198,7 +201,7 @@ void Principal::applyCreate()
 	}
 
 	// TODO Use flags and password!
-	_admContext->createPrincipal(
+	_context->createPrincipal(
 		_data,
 //		KADM5_ATTRIBUTES | KADM5_MAX_LIFE | KADM5_MAX_RLIFE |
 //		KADM5_PRINC_EXPIRE_TIME | KADM5_PW_EXPIRATION | KADM5_PRINCIPAL,
@@ -214,12 +217,12 @@ void Principal::applyCreate()
 
 void Principal::applyRename()
 {
-	_admContext->renamePrincipal(_id, _data->principal);
+	_context->renamePrincipal(_id, _data->principal);
 	// Copy id first so an exception in freePrincipal() won't
 	// render the object unusable.
 	krb5_principal p = _id;
-	_krbContext->parseName(getName().c_str(), &_id);
-	_krbContext->freePrincipal(p);
+	_context->parseName(getName().c_str(), &_id);
+	_context->freePrincipal(p);
 	_modifiedMask &= ~KADM5_PRINCIPAL;
 }
 
@@ -237,7 +240,7 @@ void Principal::load()
 	_data->principal = NULL;
 
 	try {
-		_admContext->getPrincipal(
+		_context->getPrincipal(
 			_id, _data, ~_modifiedMask | KADM5_PRINCIPAL);
 
 		_exists = true;
@@ -246,16 +249,16 @@ void Principal::load()
 		// Load defaults then (== get default principal)
 		krb5_principal defaultPrincipal = NULL;
 		// FIXME Realm may have changed from principal's id.
-		krb5_realm* realm = _krbContext->princRealm(_id);
-		_krbContext->makePrincipal(&defaultPrincipal, *realm, "default");
+		krb5_realm* realm = _context->princRealm(_id);
+		_context->makePrincipal(&defaultPrincipal, *realm, "default");
 		
-		_admContext->getPrincipal(
+		_context->getPrincipal(
 			defaultPrincipal, _data, ~_modifiedMask | KADM5_PRINCIPAL);
 		
-		_krbContext->freePrincipal(defaultPrincipal);
+		_context->freePrincipal(defaultPrincipal);
 	}
 
-	_krbContext->freePrincipal(_data->principal);
+	_context->freePrincipal(_data->principal);
 	_data->principal = p;
 
 	_loaded = true;
