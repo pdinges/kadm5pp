@@ -40,9 +40,13 @@ Connection::~Connection()
 }
 
 
-Principal* Connection::createPrincipal(const string& name) const
+Principal* Connection::createPrincipal(const string& name, const string& password) const
 {
-	Principal* p = new Principal(name, _context);
+	if (!mayAdd()) {
+		throw AddAuthError(KADM5_AUTH_ADD);
+	}
+	
+	Principal* p = new Principal(_context, name, password);
 	
 	auto_ptr< vector<string> > existing( listPrincipals(p->getId()) );
 	// TODO Differentiate between bad name and already existing principal
@@ -63,11 +67,15 @@ void Connection::deletePrincipal(Principal* principal) const
 
 Principal* Connection::getPrincipal(const string& name) const
 {
+	if (!mayGet()) {
+		throw GetAuthError(KADM5_AUTH_GET);
+	}
+	
 	auto_ptr< vector<string> > candidates( listPrincipals(name) );
 	
 	// Unambiguous description suffices.
 	if (candidates->size() == 1) {
-		return new Principal((*candidates)[0], _context);
+		return new Principal(_context, (*candidates)[0]);
 	} else if (candidates->size() < 1) {
 		throw UnknownPrincipalError(KADM5_UNK_PRINC);
 	} else {
@@ -78,6 +86,10 @@ Principal* Connection::getPrincipal(const string& name) const
 
 std::vector<Principal*>* Connection::getPrincipals(const string& filter) const
 {
+	if (!mayGet()) {
+		throw GetAuthError(KADM5_AUTH_GET);
+	}
+	
 	auto_ptr< vector<string> > names( listPrincipals(filter) );
 	vector<Principal*>* ret = new vector<Principal*>;
 	
@@ -86,7 +98,7 @@ std::vector<Principal*>* Connection::getPrincipals(const string& filter) const
 		it != names->end();
 		it++
 	) {
-		ret->push_back(new Principal(*it, _context));
+		ret->push_back(new Principal(_context, *it));
 	}
 	
 	return ret;
@@ -100,7 +112,7 @@ std::vector<string>* Connection::listPrincipals(const string& filter) const
 	vector<string>* ret = NULL;
 	
 	if (!mayList()) {
-		// TODO throw Forbidden();
+		throw ListAuthError(KADM5_AUTH_LIST);
 	}
 	
 	try {

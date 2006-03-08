@@ -20,6 +20,7 @@ namespace std {
    %template(PrincipalPVector) vector<KAdm5::Principal*>;
 }
 
+
 %exception {
 	try {
 		$action
@@ -36,6 +37,18 @@ namespace std {
 	}
 }
 
+
+// Forward declarations of used boost classes for swig.
+namespace boost {
+	namespace posix_time {
+		class ptime;
+		class time_duration;
+	}
+}
+using boost::posix_time::ptime;
+using boost::posix_time::time_duration;
+
+// ptime
 %typemap(python, out) boost::posix_time::ptime {
 	boost::posix_time::ptime epoch(boost::gregorian::date(1970,1,1));
 	boost::posix_time::time_duration d = $1 - epoch;
@@ -43,12 +56,34 @@ namespace std {
 }
 
 %typemap(python, in) const boost::posix_time::ptime& {
-	boost::posix_time::ptime* p = new boost::posix_time::ptime(boost::posix_time::from_time_t((long) PyInt_AsLong($input)));
+	boost::posix_time::ptime* p = new boost::posix_time::ptime(
+			boost::posix_time::from_time_t(
+				(long) PyInt_AsLong($input)
+			)
+		);
 	$1 = p;
 }
 
 %typemap(python, freearg) const boost::posix_time::ptime& {
 	delete (boost::posix_time::ptime*) $1;
+}
+
+// time_duration
+%typemap(python, out) boost::posix_time::time_duration {
+	$result = PyInt_FromLong((long) $1.total_seconds());
+}
+
+%typemap(python, in) const boost::posix_time::time_duration& {
+	boost::posix_time::time_duration* d = new boost::posix_time::time_duration(
+				boost::posix_time::seconds(
+					(long) PyInt_AsLong($input)
+				)
+			);
+	$1 = d;
+}
+
+%typemap(python, freearg) const boost::posix_time::time_duration& {
+	delete (boost::posix_time::time_duration*) $1;
 }
 
 typedef	int int32_t;

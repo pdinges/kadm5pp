@@ -10,44 +10,50 @@
 namespace KAdm5
 {
 using std::string;
-// TODO Add used boost classes
+using boost::posix_time::ptime;
+using boost::posix_time::time_duration;
 
 class Principal
 {
 public:
-	Principal(const string&, Context*);
+	Principal(Context*, const string&, const string& ="");
 	~Principal();
 
-	bool existsOnServer() throw(Error);
-	bool wasModified();
-	void commitChanges() throw(Error);
+	bool existsOnServer() const;
+	bool wasModified() const;
+	void commitChanges();
 	
-	string getId();
-	string getName();
+	string getId() const;
+	string getName() const;
 	void setName(const string&);
 	void setPassword(const string&);
-//	void randomizePassword();
+//	void randomizeKeys();
 	
 	
-	boost::posix_time::ptime getExpireTime();
-	void setExpireTime(const boost::posix_time::ptime&);
+	ptime getExpireTime() const;
+	void setExpireTime(const ptime&);
 //	void setExpireTime(string);
 	
-	boost::posix_time::ptime getLastPasswordChange();
-	boost::posix_time::ptime getPasswordExpiration();
-//	const krb5_deltat getMaxLifetime();
-//	const krb5_deltat getMaxRenewableLifetime();
+	ptime getPasswordExpiration() const;
+	void setPasswordExpiration(const ptime&);
+	
+	time_duration getMaxLifetime() const;
+	void setMaxLifetime(const time_duration&);
 
-	Principal* getModifier();
-	boost::posix_time::ptime getModifyTime();
-	
-//	const krb5_kvno getKeyVersion();
-//	
-//	string getPolicy();
-	
-	boost::posix_time::ptime getLastSuccess();
-	boost::posix_time::ptime getLastFailed();
-	
+	time_duration getMaxRenewableLifetime() const;
+	void setMaxRenewableLifetime(const time_duration&);
+
+//	const u_int32_t getKeyVersion() const;
+//	void setKeyVersion(u_int32_t);
+
+//	const Policy* getPolicy() const;
+//	void setPolicy(Policy*);
+
+	Principal* getModifier() const;
+	ptime getModifyTime() const;
+	ptime getLastPasswordChange() const;
+	ptime getLastSuccess() const;
+	ptime getLastFailed() const;
 	
 // TODO Implement accessors for the following kadm5_principal_ent_t members:
 //    krb5_flags attributes;
@@ -56,23 +62,22 @@ public:
 //    krb5_kvno mkvno;
 //
 //    krb5_kvno fail_auth_count;
-//    int16_t n_key_data;
-//    int16_t n_tl_data;
-//    krb5_tl_data *tl_data;
-//    krb5_key_data *key_data;
 	
 
 private:
-	void load();
-	void applyCreate();
+	void load() const;
+	void applyCreate() const;
 	void applyRename();
+	void applyModify() const;
+	void applyPwChange() const;
 
 	Context* _context;
 	kadm5_principal_ent_t _data;
 	krb5_principal _id;	// The kadmind knows this Principal under this name.
-	bool _loaded;
-	bool _exists;
-	u_int32_t _modifiedMask;
+	mutable char* _password;
+	mutable bool _loaded;
+	mutable bool _exists;
+	mutable u_int32_t _modifiedMask;
 };
 
 }

@@ -5,8 +5,9 @@
 namespace KAdm5
 {
 
-Context::Context(const char* realm, const char* host, const int port)
+Context::Context(const char* client, const char* realm, const char* host, const int port)
 	:	_config_params(NULL),
+		_client(NULL),
 		_krb_context(NULL),
 		_kadm_handle(NULL)
 {
@@ -21,6 +22,12 @@ Context::Context(const char* realm, const char* host, const int port)
 	// management by hand.
 	try {
 		// Save config parameters.
+		if (client) {
+			n = strlen(client) + 1;
+			_client = new char[n];
+			strncpy(_client, client, n);
+		}
+		
 		if (realm) {
 			n = strlen(realm) + 1;
 			c->realm = new char[n];
@@ -71,9 +78,38 @@ Context::~Context()
 	}
 	
 	// Unconditional delete works because all values are NULL initialized.
-	delete _config_params->realm;
-	delete _config_params->admin_server;
+	delete _client;
+	delete[] _config_params->realm;
+	delete[] _config_params->admin_server;
 	delete _config_params;
+}
+
+
+const char* Context::client() const
+{
+	// TODO Return default if not set.
+	return _client;
+}
+
+
+const char* Context::realm() const
+{
+	// TODO Return default if not set.
+	return _config_params->realm;
+}
+
+
+const char* Context::host() const
+{
+	// TODO Return default if not set.
+	return _config_params->admin_server;
+}
+
+
+int Context::port() const
+{
+	// TODO Return default if not set.
+	return _config_params->kadmind_port;
 }
 
 
@@ -122,13 +158,6 @@ void Context::deletePrincipal(krb5_principal principal) const
 	);
 }
 
-
-void Context::flush() const
-{
-	Error::checkReturnVal(
-		kadm5_flush(_kadm_handle)
-	);
-}
 
 void Context::freeKeyData(int16_t* keyCount, krb5_key_data* keyData) const
 {

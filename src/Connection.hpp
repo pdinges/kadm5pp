@@ -26,7 +26,7 @@ public:
 	// TODO Add copy constructor and assignment
 	~Connection();
 	
-	Principal* createPrincipal(const string&) const;
+	Principal* createPrincipal(const string&, const string& ="") const;
 //	void deletePrincipal(const string&);
 	void deletePrincipal(Principal*) const;
 

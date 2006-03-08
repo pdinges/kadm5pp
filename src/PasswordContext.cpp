@@ -11,7 +11,7 @@ PasswordContext::PasswordContext(
 	const char* realm,
 	const char* host,
 	const int port
-)	:	Context(realm, host, port)
+)	:	Context(client, realm, host, port)
 {
 	if (!password) {
 		throw ParamError(0);
@@ -21,7 +21,7 @@ PasswordContext::PasswordContext(
 	Error::checkReturnVal(
 		kadm5_init_with_password_ctx(
 			_krb_context,
-			client,
+			_client,
 			password,
 			KADM5_ADMIN_SERVICE,
 			_config_params,
@@ -30,6 +30,11 @@ PasswordContext::PasswordContext(
 			&_kadm_handle
 		)
 	);
+	
+	// Check connection.
+	// TODO Maybe find a better way?
+	u_int32_t p;
+	getPrivs(&p);
 }
 
 

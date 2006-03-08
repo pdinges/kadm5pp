@@ -13,6 +13,11 @@ class Context
 {
 public:
 	~Context();
+	
+	const char* client() const;
+	const char* realm() const;
+	const char* host() const;
+	int port() const;
 
 	/* KAdmin library functions */
 	void chpassPrincipal(krb5_principal, char*) const;
@@ -20,8 +25,6 @@ public:
 	
 	void createPrincipal(kadm5_principal_ent_t, u_int32_t, char*) const;
 	void deletePrincipal(krb5_principal) const;
-	
-	void flush() const;
 	
 	void freeKeyData(int16_t*, krb5_key_data*) const;
 	void freeNameList(char**, int*) const;
@@ -44,9 +47,10 @@ public:
 	void freePrincipal(krb5_principal) const;
 
 protected:
-	Context(const char* =NULL, const char* =NULL, const int =0);
+	Context(const char* =NULL, const char* =NULL, const char* =NULL, const int =0);
 	
 	kadm5_config_params* _config_params;
+	char* _client;	
 	krb5_context _krb_context;
 	void* _kadm_handle;
 };
