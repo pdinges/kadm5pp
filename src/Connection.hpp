@@ -1,6 +1,7 @@
 #ifndef CONNECTION_HPP_
 #define CONNECTION_HPP_
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,7 @@
 
 namespace KAdm5
 {
+using std::auto_ptr;
 using std::string;
 using std::vector;
 
@@ -24,16 +26,14 @@ public:
 //	static Connection* fromCredentialCache(const string& ="", const string& ="", const string& ="", const string& ="", const int =0);
 	
 	// TODO Add copy constructor and assignment
-	~Connection();
 	
 	Principal* createPrincipal(const string&, const string& ="") const;
-//	void deletePrincipal(const string&);
 	void deletePrincipal(Principal*) const;
+	void deletePrincipal(const string&) const;
 
 	Principal* getPrincipal(const string&) const;
 	std::vector<Principal*>* getPrincipals(const string&) const;
 	std::vector<string>* listPrincipals(const string&) const;
-
 
 	bool mayGet() const { return hasPrivilege(KADM5_PRIV_GET); }
 	bool mayAdd() const { return hasPrivilege(KADM5_PRIV_ADD); }
@@ -44,10 +44,10 @@ public:
 	bool mayAll() const { return hasPrivilege(KADM5_PRIV_ALL); }
 	
 private:
-	Connection(Context*);
+	Connection(auto_ptr<Context>);
 	bool hasPrivilege(u_int32_t) const;
 
-	Context* _context;
+	auto_ptr<Context> _context;
 };
 
 }

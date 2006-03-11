@@ -48,6 +48,7 @@ struct AuxAttributeError:	public ParamError { AuxAttributeError(int32_t c) : Par
 struct HistoryError:		public ParamError { HistoryError(int32_t c) : ParamError(c) {} };
 struct MinPasswordLifeError:	public ParamError { MinPasswordLifeError(int32_t c) : ParamError(c) {} };
 struct AmbiguousKeyError:	public ParamError { AmbiguousKeyError(int32_t c) : ParamError(c) {} };
+struct AlreadyExists:		public ParamError { AlreadyExists(int32_t c) : ParamError(c) {} };
 
 struct PwQualityError:		public Error { PwQualityError(int32_t c) : Error(c) {} };
 struct PwTooShortError:		public PwQualityError { PwTooShortError(int32_t c) : PwQualityError(c) {} };

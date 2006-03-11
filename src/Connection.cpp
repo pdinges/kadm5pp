@@ -1,12 +1,8 @@
 #include "Connection.hpp"
-
-#include <memory>
-
 #include "PasswordContext.hpp"
 
 namespace KAdm5
 {
-using std::auto_ptr;
 
 
 Connection* Connection::fromPassword(
@@ -16,27 +12,21 @@ Connection* Connection::fromPassword(
 	const string& host,
 	const int port
 ) {
-	Context* ctx = NULL;
-
 	const char* c = client.empty() ? NULL : client.c_str();
 	const char* r = realm.empty() ? NULL : realm.c_str();
 	const char* h = host.empty() ? NULL : host.c_str();
 	
-	ctx = new PasswordContext(password.c_str(), c, r, h, port);
-	
+	auto_ptr<Context> ctx(
+		new PasswordContext(password.c_str(), c, r, h, port)
+	);
+
 	return new Connection(ctx);
 }
 
 
-Connection::Connection(Context* context)
+Connection::Connection(auto_ptr<Context> context)
 	:	_context(context)
 {
-}
-
-
-Connection::~Connection()
-{
-	delete _context;
 }
 
 
@@ -46,13 +36,15 @@ Principal* Connection::createPrincipal(const string& name, const string& passwor
 		throw AddAuthError(KADM5_AUTH_ADD);
 	}
 	
-	Principal* p = new Principal(_context, name, password);
+	Principal* p = new Principal(_context.get(), name, password);
 	
 	auto_ptr< vector<string> > existing( listPrincipals(p->getId()) );
-	// TODO Differentiate between bad name and already existing principal
+	
+	// A bad principal name will throw an exception in listPrincipals(),
+	// so this test will work correctly.
 	if (existing->size() != 0) {
 		delete p;
-		throw PrincipalError(KADM5_BAD_PRINCIPAL);
+		throw AlreadyExists(0);
 	}
 	
 	return p;
@@ -61,7 +53,26 @@ Principal* Connection::createPrincipal(const string& name, const string& passwor
 
 void Connection::deletePrincipal(Principal* principal) const
 {
-//	_context->deletePrincipal(principal->)
+	krb5_principal id = NULL;
+	_context->parseName(principal->getId().c_str(), &id);
+	
+	// TODO Make this prettier. Maybe construct auto_ptr like
+	// class and modify library functions to support it.
+	try {
+		_context->deletePrincipal(id);
+	}
+	catch(...) {
+		_context->freePrincipal(id);
+		throw;
+	}
+	_context->freePrincipal(id);
+}
+
+
+void Connection::deletePrincipal(const string& id) const
+{
+	auto_ptr<Principal> p( getPrincipal(id) );
+	deletePrincipal(p.get());
 }
 
 
@@ -75,7 +86,7 @@ Principal* Connection::getPrincipal(const string& name) const
 	
 	// Unambiguous description suffices.
 	if (candidates->size() == 1) {
-		return new Principal(_context, (*candidates)[0]);
+		return new Principal(_context.get(), (*candidates)[0]);
 	} else if (candidates->size() < 1) {
 		throw UnknownPrincipalError(KADM5_UNK_PRINC);
 	} else {
@@ -98,7 +109,7 @@ std::vector<Principal*>* Connection::getPrincipals(const string& filter) const
 		it != names->end();
 		it++
 	) {
-		ret->push_back(new Principal(_context, *it));
+		ret->push_back(new Principal(_context.get(), *it));
 	}
 	
 	return ret;

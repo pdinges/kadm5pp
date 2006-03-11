@@ -2,10 +2,11 @@
 #define PRINCIPAL_H_
 
 #include <string>
+#include <vector>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include "PasswordGenerator.hpp"
 #include "Context.hpp"
-
 
 namespace KAdm5
 {
@@ -27,6 +28,7 @@ public:
 	string getName() const;
 	void setName(const string&);
 	void setPassword(const string&);
+	void randomizePassword(const PasswordGenerator& =KAdm5::PasswordGenerator());
 //	void randomizeKeys();
 	
 	
@@ -63,13 +65,13 @@ public:
 //
 //    krb5_kvno fail_auth_count;
 	
-
 private:
 	void load() const;
-	void applyCreate() const;
+	void applyCreate();
 	void applyRename();
 	void applyModify() const;
 	void applyPwChange() const;
+	void wipePassword() const;
 
 	Context* _context;
 	kadm5_principal_ent_t _data;

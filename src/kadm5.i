@@ -5,6 +5,7 @@
 %{
 
 #include "Error.hpp"
+#include "PasswordGenerator.hpp"
 #include "Context.hpp"
 #include "Principal.hpp"
 #include "Connection.hpp"
@@ -16,8 +17,8 @@
 
 // Instantiate templates used
 namespace std {
-   %template(StringVector) vector<string>;
-   %template(PrincipalPVector) vector<KAdm5::Principal*>;
+	%template(StringVector) vector<string>;
+	%template(PrincipalPVector) vector<KAdm5::Principal*>;
 }
 
 
@@ -38,7 +39,11 @@ namespace std {
 }
 
 
-// Forward declarations of used boost classes for swig.
+// Forward declarations of used classes for swig.
+namespace std {
+	class auto_ptr;
+}
+
 namespace boost {
 	namespace posix_time {
 		class ptime;
@@ -90,6 +95,7 @@ typedef	int int32_t;
 typedef	unsigned int u_int32_t;
 
 %include "Error.hpp"
+%include "PasswordGenerator.hpp"
 %include "Context.hpp"
 %include "Principal.hpp"
 %include "Connection.hpp"

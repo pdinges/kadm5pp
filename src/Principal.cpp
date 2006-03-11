@@ -50,10 +50,7 @@ Principal::~Principal()
 		}
 		_context->freePrincipalEnt(_data);
 	}
-	if (_password) {
-		memset(_password, 0, strlen(_password));
-		delete[] _password;
-	}
+	wipePassword();
 }
 
 
@@ -94,7 +91,7 @@ void Principal::commitChanges()
 		applyPwChange();
 	}
 	
-	if (!_modifiedMask) {
+	if (!wasModified()) {
 		return;
 	}
 	load();
@@ -146,14 +143,24 @@ void Principal::setName(const string& name)
 
 void Principal::setPassword(const string& password)
 {
-	if (_password) {
-		memset(_password, 0, strlen(_password));
-		delete[] _password;
-	}
+	wipePassword();
 	
 	int n = password.size() + 1;
 	_password = new char[n];
 	strncpy(_password, password.c_str(), n);
+}
+
+
+void Principal::randomizePassword(const PasswordGenerator& pwGen)
+{
+	string pw = pwGen.randomPassword();
+	int n = pw.size();
+
+	wipePassword();
+	_password = new char[n+1];
+
+	strncpy(_password, pw.c_str(), n);
+	_password[n] = 0;
 }
 
 
@@ -326,24 +333,27 @@ ptime Principal::getLastFailed() const
 }
 
 
-void Principal::applyCreate() const
+void Principal::applyCreate()
 {
 	bool nameLoaded = (_data->principal != NULL);
 	if (!nameLoaded) {
 		_data->principal = _id;
 	}
-
-	if (_password) {
-		_context->createPrincipal(
-			_data,
-			(_modifiedMask | KADM5_PRINCIPAL) & ~KADM5_FORBIDDEN_CREATE_MASK,
-			_password
-		);
-
-		memset(_password, 0, strlen(_password));
-		delete[] _password;
+	
+	if (!_password) {
+		randomizePassword();
 	}
+
+	_context->createPrincipal(
+		_data,
+		(_modifiedMask | KADM5_PRINCIPAL) & ~KADM5_FORBIDDEN_CREATE_MASK,
+		_password
+	);
+
+	wipePassword();
+
 	_modifiedMask = 0;
+	_exists = true;
 	
 	if (!nameLoaded) {
 		_data->principal = NULL;
@@ -363,7 +373,6 @@ void Principal::applyRename()
 }
 
 
-/* Assume this is always called _after_ rename or create. */
 void Principal::applyModify() const
 {
 	bool nameLoaded = (_data->principal != NULL);
@@ -388,8 +397,7 @@ void Principal::applyPwChange() const
 	_context->chpassPrincipal(_id, _password);
 	
 	// Wipe password immediately from memory.
-	memset(_password, 0, strlen(_password));
-	delete[] _password;
+	wipePassword();
 }
 
 
@@ -428,6 +436,15 @@ void Principal::load() const
 	_data->principal = p;
 
 	_loaded = true;
+}
+
+
+void Principal::wipePassword() const
+{
+	if (_password) {
+		memset(_password, 0, strlen(_password));
+		delete[] _password;
+	}
 }
 
 }
