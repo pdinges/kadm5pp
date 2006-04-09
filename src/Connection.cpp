@@ -1,157 +1,214 @@
-#include "Connection.hpp"
-#include "PasswordContext.hpp"
+/******************************************************************************
+ *                                                                            *
+ *  Copyright (c) 2006 Peter Dinges <me@elwedgo.de>                           *
+ *  All rights reserved.                                                      *
+ *                                                                            *
+ *  Redistribution and use in source and binary forms, with or without        *
+ *  modification, are permitted provided that the following conditions        *
+ *  are met:                                                                  *
+ *                                                                            *
+ *  1. Redistributions of source code must retain the above copyright         *
+ *     notice, this list of conditions and the following disclaimer.          *
+ *                                                                            *
+ *  2. Redistributions in binary form must reproduce the above copyright      *
+ *     notice, this list of conditions and the following disclaimer in the    *
+ *     documentation and/or other materials provided with the distribution.   *
+ *                                                                            *
+ *  3. The name of the author may not be used to endorse or promote products  *
+ *     derived from this software without specific prior written permission.  *
+ *                                                                            *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR      *
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES *
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.   *
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,          *
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT  *
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, *
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY     *
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT       *
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF  *
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.         *
+ *                                                                            *
+ *****************************************************************************/
+/* $Id$ */
 
-namespace KAdm5
+// STL and Boost
+#include <string>
+#include <vector>
+#include <boost/shared_ptr.hpp>
+
+// Kerberos
+#include <krb5.h>
+#include <heimdal/kadm5/admin.h>
+#include <heimdal/kadm5/kadm5_err.h>
+
+// Local
+#include "Connection.hpp"
+#include "Context.hpp"
+#include "Error.hpp"
+#include "PasswordContext.hpp"
+#include "Principal.hpp"
+
+
+namespace kadm5
 {
 
+using boost::shared_ptr;
+using std::string;
+using std::vector;
 
-Connection* Connection::fromPassword(
+shared_ptr<Connection> Connection::from_password(
 	const string& password,
 	const string& client,
 	const string& realm,
 	const string& host,
 	const int port
 ) {
-	const char* c = client.empty() ? NULL : client.c_str();
-	const char* r = realm.empty() ? NULL : realm.c_str();
-	const char* h = host.empty() ? NULL : host.c_str();
-	
-	auto_ptr<Context> ctx(
-		new PasswordContext(password.c_str(), c, r, h, port)
+	shared_ptr<Context> pc(
+		new PasswordContext(password, client, realm, host, port)
 	);
 
-	return new Connection(ctx);
+	return shared_ptr<Connection>(new Connection(pc));
 }
 
 
-Connection::Connection(auto_ptr<Context> context)
+Connection::Connection(shared_ptr<Context> context)
 	:	_context(context)
 {
 }
 
 
-Principal* Connection::createPrincipal(const string& name, const string& password) const
+shared_ptr<Principal> Connection::create_principal(
+	const string& name,
+	const string& password
+) const
 {
-	if (!mayAdd()) {
+	if (!may_add()) {
 		throw AddAuthError(KADM5_AUTH_ADD);
 	}
 	
-	Principal* p = new Principal(_context.get(), name, password);
+	shared_ptr< vector<string> > pexisting( list_principals(name) );
 	
-	auto_ptr< vector<string> > existing( listPrincipals(p->getId()) );
-	
-	// A bad principal name will throw an exception in listPrincipals(),
+	// A bad principal name will throw an exception in list_principals(),
 	// so this test will work correctly.
-	if (existing->size() != 0) {
-		delete p;
+	if (!pexisting->empty()) {
 		throw AlreadyExists(0);
 	}
+
+	shared_ptr<Principal> pp(
+		new Principal(_context, name, password)
+	);
 	
-	return p;
+	return pp;
 }
 
 
-void Connection::deletePrincipal(Principal* principal) const
+void Connection::delete_principal(const string& id) const
 {
-	krb5_principal id = NULL;
-	_context->parseName(principal->getId().c_str(), &id);
-	
-	// TODO Make this prettier. Maybe construct auto_ptr like
-	// class and modify library functions to support it.
-	try {
-		_context->deletePrincipal(id);
-	}
-	catch(...) {
-		_context->freePrincipal(id);
-		throw;
-	}
-	_context->freePrincipal(id);
+	Principal p(_context, id);
+	Error::throw_on_error(
+		kadm5_delete_principal(*_context, p._id.get())
+	);
 }
 
 
-void Connection::deletePrincipal(const string& id) const
+shared_ptr<Principal> Connection::get_principal(const string& id) const
 {
-	auto_ptr<Principal> p( getPrincipal(id) );
-	deletePrincipal(p.get());
-}
-
-
-Principal* Connection::getPrincipal(const string& name) const
-{
-	if (!mayGet()) {
+	if (!may_get()) {
 		throw GetAuthError(KADM5_AUTH_GET);
 	}
 	
-	auto_ptr< vector<string> > candidates( listPrincipals(name) );
+	shared_ptr< vector<string> > pcandidates( list_principals(id) );
 	
 	// Unambiguous description suffices.
-	if (candidates->size() == 1) {
-		return new Principal(_context.get(), (*candidates)[0]);
-	} else if (candidates->size() < 1) {
+	if (pcandidates->size() == 1) {
+		shared_ptr<Principal> pret(
+			new Principal(_context, (*pcandidates)[0])
+		);
+		return pret;
+	}
+	else if (pcandidates->size() < 1) {
 		throw UnknownPrincipalError(KADM5_UNK_PRINC);
-	} else {
+	}
+	else {
 		throw AmbiguousKeyError(KADM5_AMBIGUOUS_KEY);
 	}
 }
 
 
-std::vector<Principal*>* Connection::getPrincipals(const string& filter) const
-{
-	if (!mayGet()) {
+shared_ptr< vector< shared_ptr<Principal> > > Connection::get_principals(
+	const string& filter
+) const {
+	if (!may_get()) {
 		throw GetAuthError(KADM5_AUTH_GET);
 	}
 	
-	auto_ptr< vector<string> > names( listPrincipals(filter) );
-	vector<Principal*>* ret = new vector<Principal*>;
+	shared_ptr< vector<string> > pnames( list_principals(filter) );
+	
+	shared_ptr< vector< shared_ptr<Principal> > > pret(
+		new vector< shared_ptr<Principal> >
+	);
+	pret->reserve(pnames->size());
 	
 	for (
-		vector<string>::const_iterator it = names->begin();
-		it != names->end();
+		vector<string>::const_iterator it = pnames->begin();
+		it != pnames->end();
 		it++
 	) {
-		ret->push_back(new Principal(_context.get(), *it));
+		pret->push_back(
+			shared_ptr<Principal>(new Principal(_context, *it))
+		);
 	}
 	
-	return ret;
+	return pret;
 }
 
 
-std::vector<string>* Connection::listPrincipals(const string& filter) const
-{
-	char** list = NULL;
-	int count = 0;
-	vector<string>* ret = NULL;
-	
-	if (!mayList()) {
+shared_ptr< vector<string> > Connection::list_principals(
+	const string& filter
+) const {
+	if (!may_list()) {
 		throw ListAuthError(KADM5_AUTH_LIST);
 	}
+
+	char** list = NULL;
+	int count = 0;
 	
 	try {
-		_context->getPrincipals(filter.c_str(), &list, &count);
+		Error::throw_on_error(
+			kadm5_get_principals(
+				*_context,
+				filter.c_str(),
+				&list,
+				&count
+			)
+		);
 		
 		// Initialize vector with the list of principal names
-		// (use char** pointer as iterator).
-		ret = new vector<string>(list, list + count);
+		// (treat char** pointer as iterator).
+		shared_ptr< vector<string> > pret(
+			new vector<string>(list, list + count)
+		);
+	
+		return pret;
 	} catch (...) {
 		if (list) {
-			_context->freeNameList(list, &count);
+			kadm5_free_name_list(*_context, list, &count);
 		}
-		delete ret;
 		throw;
 	}
-	
-	return ret;
 }
 
 
-bool Connection::hasPrivilege(u_int32_t privilegeFlags) const
+const bool Connection::has_privilege(u_int32_t flags) const
 {
 	u_int32_t p;
+
+	Error::throw_on_error(
+		kadm5_get_privs(*_context, &p)
+	);
 	
-	_context->getPrivs(&p);
-	
-	return (privilegeFlags & p) == privilegeFlags;
+	return (flags & p) == flags;
 }
 
 
-}
+} /* namespace kadm5 */

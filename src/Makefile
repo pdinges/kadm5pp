@@ -1,20 +1,18 @@
-objects = Error.o PasswordGenerator.o Context.o PasswordContext.o Connection.o Principal.o
+#objects = Error.o PasswordGenerator.o Context.o PasswordContext.o Connection.o Principal.o
+objects = Error.o Context.o PasswordContext.o Connection.o Principal.o kadm5.o
 
 .PHONY: clean
 
-all: _kadm5.so
+all: kadm5.so
 
-_kadm5.so: kadm5_wrap.o random_device.o $(objects)
-	gcc -shared $^ -fPIC -o $@ -lkrb5 -lkadm5clnt -lboost_date_time
+kadm5.so: $(objects)
+	g++ -shared $^ -fPIC -o $@ -lkrb5 -lkadm5clnt -lboost_date_time -lboost_python
 
-%_wrap.o: %_wrap.cxx
-	gcc -c -fPIC -I/usr/include/python2.4/ -o $@ $<
+kadm5.o: kadm5.cpp
+	g++ -c -fPIC -I/usr/include/python2.4/ -o $@ $<
 
 %.o: %.cpp %.hpp
-	gcc -c -fPIC -o $@ $<
-
-kadm5_wrap.cxx: kadm5.i $(objects:.o=.hpp)
-	swig -c++ -python $<
+	g++ -c -fPIC -o $@ -DDEBUG $<
 
 clean:
 	rm -f kadm5.py *.pyc *.pyo *_wrap.* *.so *.o *~

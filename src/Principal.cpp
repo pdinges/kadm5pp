@@ -1,170 +1,183 @@
-#include "Principal.hpp"
+/******************************************************************************
+ *                                                                            *
+ *  Copyright (c) 2006 Peter Dinges <me@elwedgo.de>                           *
+ *  All rights reserved.                                                      *
+ *                                                                            *
+ *  Redistribution and use in source and binary forms, with or without        *
+ *  modification, are permitted provided that the following conditions        *
+ *  are met:                                                                  *
+ *                                                                            *
+ *  1. Redistributions of source code must retain the above copyright         *
+ *     notice, this list of conditions and the following disclaimer.          *
+ *                                                                            *
+ *  2. Redistributions in binary form must reproduce the above copyright      *
+ *     notice, this list of conditions and the following disclaimer in the    *
+ *     documentation and/or other materials provided with the distribution.   *
+ *                                                                            *
+ *  3. The name of the author may not be used to endorse or promote products  *
+ *     derived from this software without specific prior written permission.  *
+ *                                                                            *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR      *
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES *
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.   *
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,          *
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT  *
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, *
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY     *
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT       *
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF  *
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.         *
+ *                                                                            *
+ *****************************************************************************/
+/* $Id$ */
 
+// STL and Boost
+#include <cstring>
 #include <memory>
+#include <boost/bind.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
 
+// Kerberos
 #include <heimdal/kadm5/admin.h>
 
-#define KADM5_FORBIDDEN_CREATE_MASK \
-	( KADM5_LAST_PWD_CHANGE | KADM5_MOD_TIME | KADM5_MOD_NAME \
-	| KADM5_MKVNO | KADM5_AUX_ATTRIBUTES | KADM5_POLICY_CLR \
-	| KADM5_LAST_SUCCESS | KADM5_LAST_FAILED | KADM5_FAIL_AUTH_COUNT \
-	| KADM5_KEY_DATA )
-#define KADM5_FORBIDDEN_MODIFY_MASK \
-	( KADM5_PRINCIPAL | KADM5_LAST_PWD_CHANGE | KADM5_MOD_TIME \
-	| KADM5_MOD_NAME | KADM5_MKVNO | KADM5_AUX_ATTRIBUTES \
-	| KADM5_LAST_SUCCESS | KADM5_LAST_FAILED | KADM5_KEY_DATA )
+// Local
+#include "Principal.hpp"
+#include "Error.hpp"
 
-
-namespace KAdm5
+namespace kadm5
 {
+
 using std::auto_ptr;
 
 
-Principal::Principal(Context* context, const string& name, const string& password) :
+Principal::Principal(
+	shared_ptr<Context> context,
+	const string& id,
+	const string& password
+) :
 	_context(context),
-	_data(NULL),
-	_id(NULL),
+	_id( parse_name(_context, id) ),
+	_data(),
 	_password(NULL),
 	_loaded(false),
 	_exists(false),
-	_modifiedMask(0)
+	_modified_mask(0)
 {
-
-	_data = new kadm5_principal_ent_rec;
-	memset(_data, 0, sizeof(kadm5_principal_ent_rec));
+	KADM5_DEBUG("Principal::Principal(): Constructing...\n");
+	_data.reset(
+		new kadm5_principal_ent_rec,
+		boost::bind(delete_kadm5_principal_ent, _context, _1)
+	);
+	memset(_data.get(), 0, sizeof(kadm5_principal_ent_rec));
+	_data->principal = _id.get();
 	
-	context->parseName(name.c_str(), &_id);
-
-	if (password.size() > 0) {
-		setPassword(password.c_str());
+	if (password.length() > 0) {
+		set_password(password);
 	}
 }
 
 
 Principal::~Principal()
 {
-	if (_data) {
-		if (_id) {
-			_context->freePrincipal(_id);
-		}
-		_context->freePrincipalEnt(_data);
+	// Prevent double-deletion if both point to the same data.
+	if (_data->principal == _id.get()) {
+		_data->principal = NULL;
 	}
-	wipePassword();
+	wipe(_password);
+	KADM5_DEBUG("Principal::~Principal(): Destroyed.\n");
 }
 
 
-string Principal::getId() const
+string Principal::id() const
 {
-	char* id = NULL;
-
-	_context->unparseName(_id, &id);
-	string ret(id);
-	delete id;
-
-	return ret;
+	return unparse_name(_context, _id.get());
 }
 
 
-bool Principal::existsOnServer() const
+bool Principal::exists_on_server() const
 {
 	load();
 	return _exists;
 }
 
 
-bool Principal::wasModified() const
+bool Principal::modified() const
 {
-	return (_modifiedMask != 0) || (_password != NULL);
+	return	!exists_on_server() ||
+		(_modified_mask != 0) ||
+		(_password != NULL);
 }
 
 
-void Principal::commitChanges()
+void Principal::commit_modifications()
 {
-	if (!existsOnServer()) {
-		applyCreate();
-		_modifiedMask = 0;
-		return;
+	if (!exists_on_server()) {
+		apply_create();
 	}
-
+	
 	if (_password) {
-		applyPwChange();
+		apply_password();
 	}
 	
-	if (!wasModified()) {
-		return;
-	}
-	load();
-
-	if (_modifiedMask & KADM5_PRINCIPAL) {
-		applyRename();
+	if (_modified_mask & KADM5_PRINCIPAL) {
+		apply_rename();
 	}
 	
-	if (_modifiedMask) {
-		applyModify();
+	if (_modified_mask & (~KADM5_PRINCIPAL)) {
+		apply_modify();
 	}
 }
 
 
-string Principal::getName() const
+string Principal::name() const
 {
-	char* name = NULL;
+	return unparse_name(_context, _data->principal);
+}
+
+
+void Principal::set_name(const string& name)
+{
+	// Provide best exception safety here
+	krb5_principal pnew = NULL;
+	Error::throw_on_error( krb5_parse_name(*_context, name.c_str(), &pnew) );
 	
-	if (_data->principal) {
-		try {
-			_context->unparseName(_data->principal, &name);
-			string ret(name);
-			delete name;
-			
-			return ret;
-		}
-		catch(UnknownPrincipalError& e) {
-			delete name;
-		}
+	krb5_principal ptmp = _data->principal;
+	_data->principal = pnew;
+	_modified_mask |= KADM5_PRINCIPAL;
+
+	if (ptmp != _id.get()) {
+		delete_krb5_principal(_context, ptmp);
 	}
-
-	return getId();
 }
 
 
-void Principal::setName(const string& name)
+void Principal::set_password(const string& password)
 {
-	krb5_principal p = NULL;
+	auto_ptr<char> tmp(new char[password.length() + 1]);
+	password.copy(tmp.get(), string::npos);
+	tmp.get()[password.length()] = 0;
+
+	char* old = _password;
+	_password = tmp.release();
 	
-	if (_data->principal) {
-		_context->freePrincipal(_data->principal);
-	}
-	
-	_context->parseName(name.c_str(), &p);
-	_data->principal = p;
-	_modifiedMask |= KADM5_PRINCIPAL;
+	wipe(old);
 }
 
 
-void Principal::setPassword(const string& password)
-{
-	wipePassword();
-	
-	int n = password.size() + 1;
-	_password = new char[n];
-	strncpy(_password, password.c_str(), n);
-}
+//void Principal::randomizePassword(const PasswordGenerator& pwGen)
+//{
+//	string pw = pwGen.randomPassword();
+//	int n = pw.size();
+//
+//	wipePassword();
+//	_password = new char[n+1];
+//
+//	strncpy(_password, pw.c_str(), n);
+//	_password[n] = 0;
+//}
 
 
-void Principal::randomizePassword(const PasswordGenerator& pwGen)
-{
-	string pw = pwGen.randomPassword();
-	int n = pw.size();
-
-	wipePassword();
-	_password = new char[n+1];
-
-	strncpy(_password, pw.c_str(), n);
-	_password[n] = 0;
-}
-
-
-ptime Principal::getExpireTime() const
+ptime Principal::expire_time() const
 {
 	load();
 	if (_data->princ_expire_time > 0) {
@@ -176,8 +189,10 @@ ptime Principal::getExpireTime() const
 }
 
 
-void Principal::setExpireTime(const ptime& t)
+void Principal::set_expire_time(const ptime& t)
 {
+	krb5_timestamp old = _data->princ_expire_time;
+	
 	if (t.is_infinity() || t < ptime(boost::gregorian::date(1970,1,1))) {
 		_data->princ_expire_time = 0;
 	}
@@ -187,11 +202,13 @@ void Principal::setExpireTime(const ptime& t)
 		_data->princ_expire_time = d.total_seconds();
 	}
 	
-	_modifiedMask |= KADM5_PRINC_EXPIRE_TIME;
+	if (old != _data->princ_expire_time) {
+		_modified_mask |= KADM5_PRINC_EXPIRE_TIME;
+	}
 }
 
 
-ptime Principal::getLastPasswordChange() const
+ptime Principal::last_password_change() const
 {
 	load();
 	if (_data->last_pwd_change > 0) {
@@ -203,7 +220,7 @@ ptime Principal::getLastPasswordChange() const
 }
 
 
-ptime Principal::getPasswordExpiration() const
+ptime Principal::password_expiration() const
 {
 	load();
 	if (_data->pw_expiration > 0) {
@@ -215,8 +232,10 @@ ptime Principal::getPasswordExpiration() const
 }
 
 
-void Principal::setPasswordExpiration(const ptime& t)
+void Principal::set_password_expiration(const ptime& t)
 {
+	krb5_timestamp old = _data->pw_expiration;
+	
 	if (t.is_infinity() || t < ptime(boost::gregorian::date(1970,1,1))) {
 		_data->pw_expiration = 0;
 	}
@@ -226,11 +245,13 @@ void Principal::setPasswordExpiration(const ptime& t)
 		_data->pw_expiration = d.total_seconds();
 	}
 	
-	_modifiedMask |= KADM5_PW_EXPIRATION;
+	if (old != _data->pw_expiration) {
+		_modified_mask |= KADM5_PW_EXPIRATION;
+	}
 }
 
 
-time_duration Principal::getMaxLifetime() const
+time_duration Principal::max_lifetime() const
 {
 	load();
 	if (_data->max_life > 0) {
@@ -242,8 +263,10 @@ time_duration Principal::getMaxLifetime() const
 }
 
 
-void Principal::setMaxLifetime(const time_duration& d)
+void Principal::set_max_lifetime(const time_duration& d)
 {
+	krb5_timestamp old = _data->max_life;
+	
 	if (d.is_pos_infinity() || d < boost::posix_time::seconds(1)) {
 		_data->max_life = 0;
 	}
@@ -251,11 +274,13 @@ void Principal::setMaxLifetime(const time_duration& d)
 		_data->max_life = d.total_seconds();
 	}
 	
-	_modifiedMask |= KADM5_MAX_LIFE;
+	if (old != _data->max_life) {
+		_modified_mask |= KADM5_MAX_LIFE;
+	}
 }
 
 
-time_duration Principal::getMaxRenewableLifetime() const
+time_duration Principal::max_renewable_lifetime() const
 {
 	load();
 	if (_data->max_renewable_life > 0) {
@@ -267,8 +292,10 @@ time_duration Principal::getMaxRenewableLifetime() const
 }
 
 
-void Principal::setMaxRenewableLifetime(const time_duration& d)
+void Principal::set_max_renewable_lifetime(const time_duration& d)
 {
+	krb5_deltat old = _data->max_renewable_life;
+	
 	if (d.is_pos_infinity() || d < boost::posix_time::seconds(1)) {
 		_data->max_renewable_life = 0;
 	}
@@ -276,28 +303,30 @@ void Principal::setMaxRenewableLifetime(const time_duration& d)
 		_data->max_renewable_life = d.total_seconds();
 	}
 	
-	_modifiedMask |= KADM5_MAX_RLIFE;
-}
-
-
-Principal* Principal::getModifier() const
-{
-	char* name = NULL;
-	Principal* ret = NULL;
-	
-	if (existsOnServer()) {
-		_context->unparseName(_data->mod_name, &name);
-		ret = new Principal(_context, name);
-		delete name;
-		
-		return ret;
-	} else {
-		return NULL;
+	if (old != _data->max_renewable_life) {
+		_modified_mask |= KADM5_MAX_RLIFE;
 	}
 }
 
 
-ptime Principal::getModifyTime() const
+//Principal* Principal::getModifier() const
+//{
+//	char* name = NULL;
+//	Principal* ret = NULL;
+//	
+//	if (existsOnServer()) {
+//		_context->unparseName(_data->mod_name, &name);
+//		ret = new Principal(_context, name);
+//		delete name;
+//		
+//		return ret;
+//	} else {
+//		return NULL;
+//	}
+//}
+
+
+ptime Principal::modify_time() const
 {
 	load();
 	if (_data->mod_date > 0) {
@@ -309,7 +338,7 @@ ptime Principal::getModifyTime() const
 }
 
 
-ptime Principal::getLastSuccess() const
+ptime Principal::last_success() const
 {
 	load();
 	if (_data->last_success > 0) {
@@ -321,7 +350,7 @@ ptime Principal::getLastSuccess() const
 }
 
 
-ptime Principal::getLastFailed() const
+ptime Principal::last_failed() const
 {
 	load();
 	if (_data->last_failed > 0) {
@@ -333,117 +362,159 @@ ptime Principal::getLastFailed() const
 }
 
 
-void Principal::applyCreate()
-{
-	bool nameLoaded = (_data->principal != NULL);
-	if (!nameLoaded) {
-		_data->principal = _id;
-	}
-	
-	if (!_password) {
-		randomizePassword();
-	}
-
-	_context->createPrincipal(
-		_data,
-		(_modifiedMask | KADM5_PRINCIPAL) & ~KADM5_FORBIDDEN_CREATE_MASK,
-		_password
-	);
-
-	wipePassword();
-
-	_modifiedMask = 0;
-	_exists = true;
-	
-	if (!nameLoaded) {
-		_data->principal = NULL;
-	}
-}
-
-
-void Principal::applyRename()
-{
-	_context->renamePrincipal(_id, _data->principal);
-	// Copy id first so an exception in freePrincipal() won't
-	// render the object unusable.
-	krb5_principal p = _id;
-	_context->parseName(getName().c_str(), &_id);
-	_context->freePrincipal(p);
-	_modifiedMask &= ~KADM5_PRINCIPAL;
-}
-
-
-void Principal::applyModify() const
-{
-	bool nameLoaded = (_data->principal != NULL);
-	if (!nameLoaded) {
-		_data->principal = _id;
-	}
-	
-	_context->modifyPrincipal(
-		_data,
-		_modifiedMask & ~(KADM5_FORBIDDEN_MODIFY_MASK)
-	);
-
-	if (!nameLoaded) {
-		_data->principal = NULL;
-	}
-	_modifiedMask = 0;	// FIXME Is this always legal?
-}
-
-
-void Principal::applyPwChange() const
-{
-	_context->chpassPrincipal(_id, _password);
-	
-	// Wipe password immediately from memory.
-	wipePassword();
-}
-
-
 void Principal::load() const
 {
-	if (_loaded || _exists) {
+	if (_loaded) {
 		return;
 	}
 
 	// Load everything except the modified entries.
 	// Exception: We _must_ load the principal entry so back it up
 	// and restore afterwards.
-	krb5_principal p = _data->principal;
+	krb5_principal ptmp = NULL;
+	krb5_principal pbackup = _data->principal;
 	_data->principal = NULL;
 
 	try {
-		_context->getPrincipal(
-			_id, _data, ~_modifiedMask | KADM5_PRINCIPAL);
+		Error::throw_on_error(
+			kadm5_get_principal(
+				*_context,
+				_id.get(),
+				_data.get(),
+				(~_modified_mask) | KADM5_PRINCIPAL
+			)
+		);
+		KADM5_DEBUG("Principal::load(): Fetched data from server.\n");
 
 		_exists = true;
 	}
 	catch (UnknownPrincipalError) {
+		KADM5_DEBUG("Principal::load(): Fetching default values.\n");
+
 		// Load defaults then (== get default principal)
-		krb5_principal defaultPrincipal = NULL;
-		// FIXME Realm may have changed from principal's id.
-		krb5_realm* realm = _context->princRealm(_id);
-		_context->makePrincipal(&defaultPrincipal, *realm, "default");
+		// pbackup always points to the right krb5_principal, even
+		// if name and realm were changed.
+		shared_ptr<krb5_realm> prealm( krb5_princ_realm(*_context, pbackup) );
+
+		Error::throw_on_error(
+			krb5_make_principal(*_context, &ptmp, *prealm, "default", NULL)
+		);
+		shared_ptr<krb5_principal_data> pdefault(
+			ptmp, boost::bind(delete_krb5_principal, _context, _1)
+		);
 		
-		_context->getPrincipal(
-			defaultPrincipal, _data, ~_modifiedMask | KADM5_PRINCIPAL);
-		
-		_context->freePrincipal(defaultPrincipal);
+		Error::throw_on_error(
+			kadm5_get_principal(
+				*_context,
+				pdefault.get(),
+				_data.get(),
+				(~_modified_mask) | KADM5_PRINCIPAL
+			)
+		);
 	}
-
-	_context->freePrincipal(_data->principal);
-	_data->principal = p;
-
+	
+	ptmp = _data->principal;
+	_data->principal = pbackup;
 	_loaded = true;
+	
+	delete_krb5_principal(_context, ptmp);
 }
 
 
-void Principal::wipePassword() const
+
+void Principal::apply_create()
+{
+	KADM5_DEBUG("Principal::apply_create()\n");
+	if (!_password) {
+//		randomize_password();
+	}
+	
+	Error::throw_on_error(
+		kadm5_create_principal(
+			*_context,
+			_data.get(),
+			(_modified_mask | KADM5_PRINCIPAL) & (~forbidden_create_flags),
+			_password
+		)
+	);
+	
+	// _id and _data->principal might point to the same object but reset()
+	// handles this, so nothing is destroyed accidentaly.
+	_id.reset(
+		_data->principal, boost::bind(delete_krb5_principal, _context, _1)
+	);
+	
+	_modified_mask = 0;
+	_exists = true;
+	// As we don't know the default values for omitted fields.
+	_loaded = false;
+	
+	wipe(_password);
+}
+
+
+void Principal::apply_rename()
+{
+	KADM5_DEBUG("Principal::apply_rename()\n");
+	Error::throw_on_error(
+		kadm5_rename_principal(
+			*_context,
+			_id.get(),
+			_data->principal
+		)
+	);
+	
+	_modified_mask &= ~KADM5_PRINCIPAL;
+	// _id and _data->principal might point to the same object but reset()
+	// handles this, so nothing is destroyed accidentaly.
+	_id.reset(
+		_data->principal, boost::bind(delete_krb5_principal, _context, _1)
+	);
+}
+
+
+void Principal::apply_modify() const
+{
+	KADM5_DEBUG("Principal::apply_modify()\n");
+
+	// Use id known by the server
+	krb5_principal ptmp = _data->principal;
+	_data->principal = _id.get();
+	
+	Error::throw_on_error(
+		kadm5_modify_principal(
+			*_context,
+			_data.get(),
+			_modified_mask & (~forbidden_modify_flags)
+		)
+	);
+	
+	_data->principal = ptmp;
+	_modified_mask &= forbidden_modify_flags;
+}
+
+
+void Principal::apply_password() const
 {
 	if (_password) {
-		memset(_password, 0, strlen(_password));
-		delete[] _password;
+		KADM5_DEBUG("Principal::apply_password(): Changing password.\n");
+		Error::throw_on_error(
+			kadm5_chpass_principal(*_context, _id.get(), _password)
+		);
+		
+		// Wipe password immediately from memory.
+		wipe(_password);
+	}
+}
+
+
+void Principal::wipe(char*& cstr) const
+{
+	if (cstr) {
+		KADM5_DEBUG("Principal::wipe(): Wiping password from memory.\n");
+		memset(cstr, 0, strlen(cstr));
+		delete[] cstr;
+		cstr = NULL;
 	}
 }
 

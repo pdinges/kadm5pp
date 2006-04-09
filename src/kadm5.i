@@ -5,7 +5,7 @@
 %{
 
 #include "Error.hpp"
-#include "PasswordGenerator.hpp"
+//#include "PasswordGenerator.hpp"
 #include "Context.hpp"
 #include "Principal.hpp"
 #include "Connection.hpp"
@@ -15,10 +15,24 @@
 
 %}
 
+// Forward declarations of used classes for swig.
+namespace std {
+	class auto_ptr;
+}
+
+namespace boost {
+	class noncopyable;
+	class shared_ptr;
+	namespace posix_time {
+		class ptime;
+		class time_duration;
+	}
+}
+
 // Instantiate templates used
 namespace std {
 	%template(StringVector) vector<string>;
-	%template(PrincipalPVector) vector<KAdm5::Principal*>;
+//	%template(PrincipalPVector) vector<kadm5::Principal>;
 }
 
 
@@ -26,10 +40,10 @@ namespace std {
 	try {
 		$action
 	}
-	catch (KAdm5::Error& e) {
-		PyErr_SetString(PyExc_RuntimeError, strerror(e.getErrorCode()));
+	catch (kadm5::Error& e) {
+		PyErr_SetString(PyExc_RuntimeError, strerror(e.error_code()));
 
-//		PyObject* p = SWIG_NewPointerObj((void *) &e, SWIGTYPE_p_KAdm5__Error, 1);
+//		PyObject* p = SWIG_NewPointerObj((void *) &e, SWIGTYPE_p_kadm5__Error, 1);
 //		PyObject* c = PyErr_NewException("kadm5.Error", NULL, NULL);
 //		PyErr_SetObject(c, p);
 //		Py_DECREF(p);
@@ -39,29 +53,21 @@ namespace std {
 }
 
 
-// Forward declarations of used classes for swig.
-namespace std {
-	class auto_ptr;
-}
-
-namespace boost {
-	namespace posix_time {
-		class ptime;
-		class time_duration;
-	}
-}
-using boost::posix_time::ptime;
-using boost::posix_time::time_duration;
 
 // ptime
 %typemap(python, out) boost::posix_time::ptime {
-	boost::posix_time::ptime epoch(boost::gregorian::date(1970,1,1));
-	boost::posix_time::time_duration d = $1 - epoch;
+	using boost::posix_time::ptime;
+	using boost::posix_time::time_duration;
+
+	ptime epoch(boost::gregorian::date(1970,1,1));
+	time_duration d = $1 - epoch;
 	$result = PyInt_FromLong((long) d.total_seconds());
 }
 
 %typemap(python, in) const boost::posix_time::ptime& {
-	boost::posix_time::ptime* p = new boost::posix_time::ptime(
+	using boost::posix_time::ptime;
+
+	ptime* p = new ptime(
 			boost::posix_time::from_time_t(
 				(long) PyInt_AsLong($input)
 			)
@@ -95,7 +101,7 @@ typedef	int int32_t;
 typedef	unsigned int u_int32_t;
 
 %include "Error.hpp"
-%include "PasswordGenerator.hpp"
-%include "Context.hpp"
-%include "Principal.hpp"
+//%include "PasswordGenerator.hpp"
+//%include "Context.hpp"
 %include "Connection.hpp"
+%include "Principal.hpp"

@@ -1,278 +1,177 @@
-#include "Context.hpp"
+/******************************************************************************
+ *                                                                            *
+ *  Copyright (c) 2006 Peter Dinges <me@elwedgo.de>                           *
+ *  All rights reserved.                                                      *
+ *                                                                            *
+ *  Redistribution and use in source and binary forms, with or without        *
+ *  modification, are permitted provided that the following conditions        *
+ *  are met:                                                                  *
+ *                                                                            *
+ *  1. Redistributions of source code must retain the above copyright         *
+ *     notice, this list of conditions and the following disclaimer.          *
+ *                                                                            *
+ *  2. Redistributions in binary form must reproduce the above copyright      *
+ *     notice, this list of conditions and the following disclaimer in the    *
+ *     documentation and/or other materials provided with the distribution.   *
+ *                                                                            *
+ *  3. The name of the author may not be used to endorse or promote products  *
+ *     derived from this software without specific prior written permission.  *
+ *                                                                            *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR      *
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES *
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.   *
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,          *
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT  *
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, *
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY     *
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT       *
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF  *
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.         *
+ *                                                                            *
+ *****************************************************************************/
+/* $Id$ */
 
+// STL and Boost
 #include <cstring>
+#include <memory>
+#include <string>
+#include <boost/bind.hpp>
+#include <boost/shared_ptr.hpp>
 
-namespace KAdm5
-{
+// Kerberos
+#include <krb5.h>
+#include <heimdal/kadm5/admin.h>
 
-Context::Context(const char* client, const char* realm, const char* host, const int port)
-	:	_config_params(NULL),
-		_client(NULL),
-		_krb_context(NULL),
-		_kadm_handle(NULL)
+// Local
+#include "Context.hpp"
+#include "Error.hpp"
+
+namespace kadm5
 {
-	int n = 0;
 	
-	// Structure 0-setting is important for the destructor.
-	// (Unused pointers must be NULL.)
-	kadm5_config_params* c = new kadm5_config_params;
-	memset(c, 0, sizeof(kadm5_config_params));
+using boost::shared_ptr;
+using std::string;
+
+
+Context::Context(
+		const string& client,
+		const string& realm,
+		const string& host,
+		const int port
+	) :
+		_kadm_handle(),
+		_krb_context(),
+		_config_params( create_config_params(realm, host, port) ),
+		_client(client)
+{
+	KADM5_DEBUG("Context::Context(): Constructing...\n");
+	krb5_context_data* pc = NULL;
+	Error::throw_on_error( krb5_init_context(&pc) );
+	_krb_context.reset(pc, krb5_free_context);
 	
-	// Auto-Pointers are not feasible here so do resource
-	// management by hand.
-	try {
-		// Save config parameters.
-		if (client) {
-			n = strlen(client) + 1;
-			_client = new char[n];
-			strncpy(_client, client, n);
-		}
-		
-		if (realm) {
-			n = strlen(realm) + 1;
-			c->realm = new char[n];
-			strncpy(c->realm, realm, n);
-	
-			c->mask |= KADM5_CONFIG_REALM;
-		}		
-	
-		if (host) {
-			n = strlen(host) + 1;
-			c->admin_server = new char[n];
-			strncpy(c->admin_server, host, n);
-	
-			c->mask |= KADM5_CONFIG_ADMIN_SERVER;
-		}		
-		
-		if (port > 0) {
-			c->kadmind_port = port;
-			c->mask |= KADM5_CONFIG_KADMIND_PORT;
-		}
-	
-		_config_params = c;
-		
-		Error::checkReturnVal(
-			krb5_init_context(&_krb_context)
+	if (!realm.empty()) {
+		Error::throw_on_error(
+			krb5_set_default_realm(
+				_krb_context.get(),
+				realm.c_str()
+			)
 		);
-		if (c->realm) {
-			krb5_set_default_realm(_krb_context, c->realm);
-		}
-		
-	}
-	catch (...) {
-		// In case of an emergency, use destructor to clean up.
-		this->~Context();
-		throw;
 	}
 }
 
 
-Context::~Context()
-{
-	if (_kadm_handle) {
-		kadm5_destroy(_kadm_handle);
-	}
 
-	if (_krb_context) {
-		krb5_free_context(_krb_context);
+shared_ptr<kadm5_config_params> create_config_params(
+	const string& realm,
+	const string& host,
+	const int port
+)
+{
+	KADM5_DEBUG("create_config_params()\n");
+	// Ensure kadm5_config_params structure is deleted properly.
+	shared_ptr<kadm5_config_params> pret(
+		new kadm5_config_params, delete_config_params
+	);
+
+	// Structure 0-setting is important for deletion.
+	// (Unused pointers must be NULL.)
+	memset(pret.get(), 0, sizeof(kadm5_config_params));
+	
+	if (!realm.empty()) {
+		pret->realm = new char[realm.length() + 1];
+		realm.copy(pret->realm, string::npos);
+		pret->realm[realm.length()] = 0;
+		
+		pret->mask | KADM5_CONFIG_REALM;
+	}		
+
+	if (!host.empty()) {
+		pret->admin_server = new char[host.length() + 1];
+		host.copy(pret->admin_server, string::npos);
+		pret->admin_server[host.length()] = 0;
+		
+		pret->mask | KADM5_CONFIG_ADMIN_SERVER;
+	}		
+	
+	if (port > 0) {
+		pret->kadmind_port = port;
+		pret->mask |= KADM5_CONFIG_KADMIND_PORT;
 	}
 	
-	// Unconditional delete works because all values are NULL initialized.
-	delete _client;
-	delete[] _config_params->realm;
-	delete[] _config_params->admin_server;
-	delete _config_params;
+	return pret;
 }
 
 
-const char* Context::client() const
+void delete_config_params(kadm5_config_params* pp)
 {
-	// TODO Return default if not set.
-	return _client;
+	KADM5_DEBUG("delete_config_params()\n");
+	// Unconditional delete works since uninitialized pointers are NULL.
+	delete[] pp->realm;
+	delete[] pp->admin_server;
+	delete pp;
 }
 
 
-const char* Context::realm() const
+void delete_krb5_principal(shared_ptr<const Context> pc, krb5_principal pp)
 {
-	// TODO Return default if not set.
-	return _config_params->realm;
+	KADM5_DEBUG("delete_krb5_principal()\n");
+	krb5_free_principal(*pc, pp);
+}
+
+void delete_kadm5_principal_ent(
+	shared_ptr<const Context> pc,
+	kadm5_principal_ent_t pe
+) {
+	KADM5_DEBUG("delete_kadm5_principal_ent()\n");
+	kadm5_free_principal_ent(*pc, pe);
 }
 
 
-const char* Context::host() const
-{
-	// TODO Return default if not set.
-	return _config_params->admin_server;
-}
+// Use a shared pointer to Context so it won't cease to exist while still
+// needed for deletion.
+shared_ptr<krb5_principal_data> parse_name(
+	shared_ptr<const Context> pc,
+	const string& name
+) {
+	krb5_principal_data* ptmp = NULL;
 
-
-int Context::port() const
-{
-	// TODO Return default if not set.
-	return _config_params->kadmind_port;
-}
-
-
-void Context::chpassPrincipal(krb5_principal principal, char* password) const
-{
-	Error::checkReturnVal(
-		kadm5_chpass_principal(
-			_kadm_handle,
-			principal,
-			password
-		)
+	Error::throw_on_error( krb5_parse_name(*pc, name.c_str(), &ptmp) );
+	shared_ptr<krb5_principal_data> pret(
+		ptmp, boost::bind(delete_krb5_principal, pc, _1)
 	);
+	
+	return pret;
 }
 
 
-void Context::chpassPrincipal(krb5_principal principal, int keyCount, krb5_key_data* keyData) const
+string unparse_name(shared_ptr<const Context> pc, krb5_const_principal pp)
 {
-	Error::checkReturnVal(
-		kadm5_chpass_principal_with_key(
-			_kadm_handle,
-			principal,
-			keyCount,
-			keyData
-		)
-	);
+	char* tmp = NULL;
+	
+	Error::throw_on_error( krb5_unparse_name(*pc, pp, &tmp) );
+	std::auto_ptr<char> name(tmp);
+	
+	return string(name.get());	
 }
 
-
-void Context::createPrincipal(kadm5_principal_ent_t principal, u_int32_t mask, char* password) const
-{
-	Error::checkReturnVal(
-		kadm5_create_principal(
-			_kadm_handle,
-			principal,
-			mask,
-			password
-		)
-	);
-}
-
-
-void Context::deletePrincipal(krb5_principal principal) const
-{
-	Error::checkReturnVal(
-		kadm5_delete_principal(_kadm_handle, principal)
-	);
-}
-
-
-void Context::freeKeyData(int16_t* keyCount, krb5_key_data* keyData) const
-{
-	kadm5_free_key_data(_kadm_handle, keyCount, keyData);
-}
-
-
-void Context::freeNameList(char** list, int* count) const
-{
-	kadm5_free_name_list(_kadm_handle, list, count);
-}
-
-
-void Context::freePrincipalEnt(kadm5_principal_ent_t principal) const
-{
-	kadm5_free_principal_ent(_kadm_handle, principal);
-}
-
-
-void Context::getPrincipal(krb5_principal principal, kadm5_principal_ent_t output, u_int32_t mask) const
-{
-	Error::checkReturnVal(
-		kadm5_get_principal(
-			_kadm_handle,
-			principal,
-			output,
-			mask
-		)
-	);
-}
-
-
-void Context::getPrincipals(const char* filter, char*** nameList, int* nameCount) const
-{
-	Error::checkReturnVal(
-		kadm5_get_principals(
-			_kadm_handle,
-			filter,
-			nameList,
-			nameCount
-		)
-	);
-}
-
-
-void Context::getPrivs(u_int32_t* privileges) const
-{
-	Error::checkReturnVal(
-		kadm5_get_privs(_kadm_handle, privileges)
-	);
-}
-
-void Context::modifyPrincipal(kadm5_principal_ent_t principal, u_int32_t mask) const
-{
-	Error::checkReturnVal(
-		kadm5_modify_principal(_kadm_handle, principal, mask)
-	);
-}
-
-
-void Context::randkeyPrincipal(krb5_principal principal, krb5_keyblock** newKeyData, int* keyCount) const
-{
-	Error::checkReturnVal(
-		kadm5_randkey_principal(
-			_kadm_handle,
-			principal,
-			newKeyData,
-			keyCount
-		)
-	);
-}
-
-
-void Context::renamePrincipal(krb5_principal source, krb5_principal target) const
-{
-	Error::checkReturnVal(
-		kadm5_rename_principal(_kadm_handle, source, target)
-	);
-}
-
-
-void Context::parseName(const char* name, krb5_principal* principal) const
-{
-	Error::checkReturnVal(
-		krb5_parse_name(_krb_context, name, principal)
-	);
-}
-
-
-void Context::unparseName(krb5_const_principal principal, char** name) const
-{
-	Error::checkReturnVal(
-		krb5_unparse_name(_krb_context, principal, name)
-	);
-}
-
-
-krb5_realm* Context::princRealm(krb5_principal principal) const
-{
-	return krb5_princ_realm(_krb_context, principal);
-}
-
-// TODO Make argument list variable to match library declaration.
-void Context::makePrincipal(krb5_principal* principal, krb5_const_realm realm, const char* name) const
-{
-	Error::checkReturnVal(
-		krb5_make_principal(_krb_context, principal, realm, name, NULL)
-	);
-}
-
-
-void Context::freePrincipal(krb5_principal principal) const
-{
-	krb5_free_principal(_krb_context, principal);
-}
-
-
-}
+} /* namespace kadm5 */
