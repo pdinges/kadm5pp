@@ -103,7 +103,33 @@ public:
 	);
 // TODO Implement
 //	static shared_ptr<Connection> from_keytab();
-//	static shared_ptr<Connection> from_credential_cache();
+
+	/**
+	 * Factory function to create a Connection using authentication
+	 * information from the given credential cache.
+	 * 
+	 * \param	ccname	Use credentials from this cache. The name may
+	 * 			be a filename or any other valid identifier
+	 * 			of form <code>TYPE:ID</code> understood by the
+	 * 			libraries. If <code>TYPE:</code> is omitted,
+	 * 			<code>FILE:</code> is assumed.
+	 * \param	realm	The name of the realm to assume if this part
+	 * 			of a Principal's name is omitted. If missing,
+	 * 			the libraries' default value will be used.
+	 * \param	host	Hostname of the KAdmin server to connect to.
+	 * 			If missing, the <code>admin_server</code>
+	 * 			parameter from the Kerberos configuration will
+	 * 			be used.
+	 * \param	port	The port number used by the KAdmin server.
+	 * \return	a smart pointer to the the freshly created and
+	 * 		initialized Connection.
+	 **/
+	static shared_ptr<Connection> from_credential_cache(
+		const string& ccname = "",
+		const string& realm ="",
+		const string& host ="",
+		const int port =0
+	);
 	///@}
 
 	/**

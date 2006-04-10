@@ -91,45 +91,40 @@ public:
 	 * Get the name of the Kerberos principal this context uses for
 	 * connection to the KAdmin server.
 	 * 
-	 * \return the Kerberos principal used for connection to the KAdmin
+	 * \return The Kerberos principal used for connection to the KAdmin
 	 *         server.
-	 * 
-	 * \todo Return the default value if this wasn't set on construction.
 	 **/
-	const string client() const { return _client; }
+	const string client() const;
 	
 	/**
 	 * Get the name of the realm this context uses.
 	 * 
-	 * \return the Kerberos realm this context uses.
-	 * 
-	 * \todo Return the default value if this wasn't set on construction.
+	 * \return The Kerberos realm this context uses.
 	 **/
 	const string realm() const;
 	
 	/**
 	 * Get the used KAdmin server's hostname.
 	 * 
-	 * \return the hostname of the KAdmin server this context uses.
-	 * 
-	 * \todo Return the default value if this wasn't set on construction.
+	 * \return The hostname of the KAdmin server this context uses.
 	 **/
 	const string host() const;
 	
 	/**
 	 * Get the used KAdmin server's port number.
 	 * 
-	 * \return the port number of the KAdmin server this context uses.
-	 * 
-	 * \todo Return the default value if this wasn't set on construction.
-	 * \todo Return the value in the hostname string if a portnumber was
-	 *       provided with it (as it overrides the parameter).
+	 * \return The port number of the KAdmin server this context uses.
 	 **/
-	const int port() const { return _config_params->kadmind_port; }
+	const int port() const;
 
 protected:
 	/**
 	 * Construct a Context with the given connection data.
+	 * 
+	 * \note
+	 * If <code>host</code> contains a port number (is of the form
+	 * <code>hostname:port</code>), the port in the hostname will overwrite
+	 * the setting from <code>port</code>.
 	 * 
 	 * \param	client	The principal we identify ourselves as to the
 	 * 			KAdmin server. If empty, the Kerberos
@@ -180,19 +175,6 @@ private:
 	/** KAdmin connection handle. */
 	shared_ptr<void> _kadm_handle;
 };
-
-// Put implementation outside class definition to preserve readability.
-inline const string Context::realm() const
-{
-	return _config_params->realm ? _config_params->realm : "";
-}
-
-inline const string Context::host() const
-{
-	return _config_params->admin_server ?
-		_config_params->admin_server :
-		"";
-}
 
 
 /* Helper functions for structure memory management with shared_ptr<T>. */

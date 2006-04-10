@@ -42,6 +42,7 @@
 #include <heimdal/kadm5/kadm5_err.h>
 
 // Local
+#include "CCacheContext.hpp"
 #include "Connection.hpp"
 #include "Context.hpp"
 #include "Error.hpp"
@@ -67,8 +68,23 @@ shared_ptr<Connection> Connection::from_password(
 		new PasswordContext(password, client, realm, host, port)
 	);
 
-	return shared_ptr<Connection>(new Connection(pc));
+	return shared_ptr<Connection>( new Connection(pc) );
 }
+
+
+shared_ptr<Connection> Connection::from_credential_cache(
+	const string& ccname,
+	const string& realm,
+	const string& host,
+	const int port
+) {
+	shared_ptr<Context> pc(
+		new CCacheContext(ccname, realm, host, port)
+	);
+	
+	return shared_ptr<Connection>( new Connection(pc) );
+}
+
 
 
 Connection::Connection(shared_ptr<Context> context)

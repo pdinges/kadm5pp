@@ -130,7 +130,7 @@ public:
 	 * \return	true, if this Principal represents an existing entry in
 	 * 		the Kerberos database.
 	 **/
-	bool exists_on_server() const;
+	const bool exists_on_server() const;
 	
 	/**
 	 * Test whether this Principal's data differs from the values saved in
@@ -140,7 +140,7 @@ public:
 	 * 		fetched from the server or if this is a new Principal.
 	 * 		False otherwise.
 	 **/
-	bool modified() const;
+	const bool modified() const;
 	
 	/**
 	 * Commit all changes to the database.
@@ -149,14 +149,13 @@ public:
 	///@}
 
 	
-	// TODO Make const return types
 	/**
 	 * Get the name, this Principal is currently known as to the server
 	 * (if it exists_on_server()).
 	 * 
 	 * \return	The Principal's unique name in the Kerberos Database.
 	 **/
-	string id() const;
+	const string id() const;
 	
 	/**
 	 * Get the Principal's name.
@@ -168,7 +167,7 @@ public:
 	 * 
 	 * \return	The Principal's name.
 	 **/
-	string name() const;
+	const string name() const;
 	
 	/**
 	 * Set the Principal's name.
@@ -200,7 +199,7 @@ public:
 	 * 		<code>boost::posix_time::pos_infin</code> if the
 	 * 		Principal never expires.
 	 **/
-	ptime expire_time() const;
+	const ptime expire_time() const;
 	
 	/**
 	 * Set the expiration date.
@@ -220,7 +219,7 @@ public:
 	 * 		<code>boost::posix_time::pos_infin</code> if the
 	 * 		password never expires.
 	 **/
-	ptime password_expiration() const;
+	const ptime password_expiration() const;
 	
 	/**
 	 * Set the password expiration date.
@@ -240,7 +239,7 @@ public:
 	 * 		(Be careful with such tickets! They are a major
 	 * 		security risk.)
 	 **/
-	time_duration max_lifetime() const;
+	const time_duration max_lifetime() const;
 	
 	/**
 	 * Set the Principal's maximum Kerberos ticket lifetime.
@@ -262,7 +261,7 @@ public:
 	 * 		(Be careful with such tickets! They are a major
 	 * 		security risk.)
 	 **/
-	time_duration max_renewable_lifetime() const;
+	const time_duration max_renewable_lifetime() const;
 	
 	/**
 	 * Set the new lifetime in which the Principal may renew held tickets.
@@ -291,7 +290,7 @@ public:
 	 * 		<code>boost::posix_time::neg_infin</code> if it has
 	 * 		never been modified.
 	 **/
-	ptime modify_time() const;
+	const ptime modify_time() const;
 	
 	/**
 	 * Get the latest date on which the Principal's password was changed
@@ -311,7 +310,7 @@ public:
 	 * 		never been changed or if the server does not support
 	 * 		this information.
 	 **/
-	ptime last_password_change() const;
+	const ptime last_password_change() const;
 
 	/**
 	 * Get the latest date on which the Principal successfully
@@ -328,7 +327,7 @@ public:
 	 * 		never been the case or if the server does not support
 	 * 		this information.
 	 **/
-	ptime last_success() const;
+	const ptime last_success() const;
 
 	/**
 	 * Get the latest date on which the Principal failed to authenticate
@@ -345,7 +344,7 @@ public:
 	 * 		never been the case or if the server does not support
 	 * 		this information.
 	 **/
-	ptime last_failed() const;
+	const ptime last_failed() const;
 	
 // TODO Implement accessors for the following kadm5_principal_ent_t members:
 //    krb5_flags attributes;

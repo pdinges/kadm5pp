@@ -81,9 +81,6 @@ using std::string;
  * Also, a convenience function throw_on_error() is provided to wrap library
  * function calls. It will throw an appropriate exception if an error code
  * was returned. See throw_on_error()'s documentation for an example.
- * 
- * \todo 	Inherit from std::exception and provide a string translation
- * 		for the error code (use library error tables).
  **/
 class error: public std::exception
 {
@@ -103,7 +100,7 @@ public:
 	 * \return	The error number as <code>#defined</code> in
 	 * 		<krb5_err.h> or <kadm5/kadm5_err.h>.
 	 **/
-	int32_t error_code() const { return this->_error_code; }
+	const int32_t error_code() const { return this->_error_code; }
 	
 	/**
 	 * Helper function to wrap Kerberos and KAdmin library calls and throw

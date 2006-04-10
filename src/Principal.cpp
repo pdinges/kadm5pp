@@ -88,20 +88,20 @@ Principal::~Principal()
 }
 
 
-string Principal::id() const
+const string Principal::id() const
 {
 	return unparse_name(_context, _id.get());
 }
 
 
-bool Principal::exists_on_server() const
+const bool Principal::exists_on_server() const
 {
 	load();
 	return _exists;
 }
 
 
-bool Principal::modified() const
+const bool Principal::modified() const
 {
 	return	!exists_on_server() ||
 		(_modified_mask != 0) ||
@@ -129,7 +129,7 @@ void Principal::commit_modifications()
 }
 
 
-string Principal::name() const
+const string Principal::name() const
 {
 	return unparse_name(_context, _data->principal);
 }
@@ -177,7 +177,7 @@ void Principal::set_password(const string& password)
 //}
 
 
-ptime Principal::expire_time() const
+const ptime Principal::expire_time() const
 {
 	load();
 	if (_data->princ_expire_time > 0) {
@@ -208,7 +208,7 @@ void Principal::set_expire_time(const ptime& t)
 }
 
 
-ptime Principal::last_password_change() const
+const ptime Principal::last_password_change() const
 {
 	load();
 	if (_data->last_pwd_change > 0) {
@@ -220,7 +220,7 @@ ptime Principal::last_password_change() const
 }
 
 
-ptime Principal::password_expiration() const
+const ptime Principal::password_expiration() const
 {
 	load();
 	if (_data->pw_expiration > 0) {
@@ -251,7 +251,7 @@ void Principal::set_password_expiration(const ptime& t)
 }
 
 
-time_duration Principal::max_lifetime() const
+const time_duration Principal::max_lifetime() const
 {
 	load();
 	if (_data->max_life > 0) {
@@ -280,7 +280,7 @@ void Principal::set_max_lifetime(const time_duration& d)
 }
 
 
-time_duration Principal::max_renewable_lifetime() const
+const time_duration Principal::max_renewable_lifetime() const
 {
 	load();
 	if (_data->max_renewable_life > 0) {
@@ -326,7 +326,7 @@ void Principal::set_max_renewable_lifetime(const time_duration& d)
 //}
 
 
-ptime Principal::modify_time() const
+const ptime Principal::modify_time() const
 {
 	load();
 	if (_data->mod_date > 0) {
@@ -338,7 +338,7 @@ ptime Principal::modify_time() const
 }
 
 
-ptime Principal::last_success() const
+const ptime Principal::last_success() const
 {
 	load();
 	if (_data->last_success > 0) {
@@ -350,7 +350,7 @@ ptime Principal::last_success() const
 }
 
 
-ptime Principal::last_failed() const
+const ptime Principal::last_failed() const
 {
 	load();
 	if (_data->last_failed > 0) {

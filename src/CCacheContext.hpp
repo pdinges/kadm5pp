@@ -31,11 +31,14 @@
  *****************************************************************************/
 /* $Id$ */
 
-#ifndef PASSWORDCONTEXT_HPP_
-#define PASSWORDCONTEXT_HPP_
+#ifndef CCACHECONTEXT_HPP_
+#define CCACHECONTEXT_HPP_
 
 // STL and Boost
 #include <string>
+
+// Kerberos
+#include <krb5.h>
 
 // Local
 #include "Context.hpp"
@@ -43,25 +46,27 @@
 namespace kadm5
 {
 
+//using boost::shared_ptr;
 using std::string;
 
 /**
  * \brief
- * Kerberos and KAdmin Context using password authentication.
+ * Kerberos and KAdmin Context using credentials from a cache for
+ * authentication.
  * 
  * \author Peter Dinges <me@elwedgo.de>
  **/
-class PasswordContext : public Context
+class CCacheContext : public Context
 {
 public:
 	/**
-	 * Constructs a new PasswordContext with the given connection data.
+	 * Constructs a new CCacheContext with the given connection data.
 	 * 
-	 * \param	password	Connect to the KAdmin server using
-	 * 			this password.
-	 * \param	client	The principal we identify ourselves as to the
-	 * 			KAdmin server. If empty, the Kerberos
-	 * 			libraries' default value will be used.
+	 * \param	ccname	Use credentials from this cache. The name may
+	 * 			be a filename or any other valid identifier
+	 * 			of form <code>TYPE:ID</code> understood by the
+	 * 			libraries. If <code>TYPE:</code> is omitted,
+	 * 			<code>FILE:</code> is assumed.
 	 * \param	realm	The Kerberos realm for this context (will be
 	 * 			used as default for all principals if no
 	 * 			realm was specified).
@@ -76,15 +81,23 @@ public:
 	 * 
 	 * \todo	Check for empty password and throw exception.
 	 **/
-	explicit PasswordContext(
-		const string& password,
-		const string& client,
+	explicit CCacheContext(
+		const string& ccname,
 		const string& realm,
 		const string& host,
 		const int port
 	);
+	
+	/**
+	 * Releases all held resources.
+	 **/
+	virtual ~CCacheContext();
+
+private:
+	/** Used credential cache. */
+	krb5_ccache _ccache;
 };
 
 } /* namespace kadm5 */
 
-#endif /*PASSWORDCONTEXT_HPP_*/
+#endif /*CCACHECONTEXT_HPP_*/

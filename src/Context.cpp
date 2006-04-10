@@ -32,6 +32,7 @@
 /* $Id$ */
 
 // STL and Boost
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -64,7 +65,7 @@ Context::Context(
 		_config_params( create_config_params(realm, host, port) ),
 		_client(client)
 {
-	KADM5_DEBUG("Context::Context(): Constructing...\n");
+	KADM5_DEBUG("Context(): Constructing...\n");
 	krb5_context_data* pc = NULL;
 	error::throw_on_error( krb5_init_context(&pc) );
 	_krb_context.reset(pc, krb5_free_context);
@@ -79,6 +80,121 @@ Context::Context(
 	}
 }
 
+
+const string Context::client() const
+{
+	if (_client.empty()) {
+		krb5_principal_data* pdefp = NULL;
+		
+		try {
+			error::throw_on_error(
+				krb5_get_default_principal(
+					_krb_context.get(),
+					&pdefp
+				)
+			);
+			
+			char* ptmps = NULL;
+			error::throw_on_error(
+				krb5_unparse_name(
+					_krb_context.get(),
+					pdefp,
+					&ptmps
+				)
+			);
+			string name( ptmps );
+
+			delete ptmps;
+			krb5_free_principal(_krb_context.get(), pdefp);
+			
+			// FIXME Is this always correct?
+			if (name.find("/") == string::npos) {
+				if (name.find("@") == string::npos) {
+					name += "/admin";
+				}
+				else {
+					name.insert(name.find("@"), "/admin");
+				}
+			}
+			
+			return name;
+		}
+		catch(...) {
+			krb5_free_principal(_krb_context.get(), pdefp);
+			throw;
+		}
+	}
+	else {
+		return _client.find("@") == string::npos ?
+			_client + "@" + realm():
+			_client;
+	}
+}
+
+
+const string Context::realm() const
+{
+	if (_config_params->mask & KADM5_CONFIG_REALM) {
+		return _config_params->realm;
+	}
+	else {
+		char* ptmp = NULL;
+		error::throw_on_error(
+			krb5_get_default_realm(_krb_context.get(), &ptmp)
+		);
+		std::auto_ptr<char> pr( ptmp );
+		
+		return pr.get();
+	}
+}
+
+
+const string Context::host() const
+{
+	if (_config_params->mask & KADM5_CONFIG_ADMIN_SERVER) {
+		return _config_params->admin_server;
+	}
+	else {
+		std::auto_ptr<const char> ps(
+			krb5_config_get_string_default(
+				_krb_context.get(),
+				NULL,
+				NULL,
+				"realms",
+				realm().c_str(),
+				"admin_server",
+				NULL
+			)
+		);
+		
+		// "admin_server" config key must exist since construction
+		// would have thrown an exception otherwise (no admin server
+		// known).
+		assert(ps.get() != NULL);
+		string s(ps.get());
+		
+		return s.substr(0, s.rfind(":"));
+	}
+}
+
+
+const int Context::port() const {
+	if (	(_config_params->mask & KADM5_CONFIG_ADMIN_SERVER) &&
+		(host().rfind(":") != string::npos)
+	) {
+		string h = host();
+		
+		// This will deliver a correct port since the construction
+		// would have failed otherwise.
+		return atoi( h.substr(h.rfind(":")).c_str() );
+	}
+	else if (_config_params->mask & KADM5_CONFIG_KADMIND_PORT) {
+		return _config_params->kadmind_port;
+	}
+	else {
+		return 749;
+	}
+}
 
 
 shared_ptr<kadm5_config_params> create_config_params(
@@ -137,6 +253,7 @@ void delete_krb5_principal(shared_ptr<const Context> pc, krb5_principal pp)
 	KADM5_DEBUG("delete_krb5_principal()\n");
 	krb5_free_principal(*pc, pp);
 }
+
 
 void delete_kadm5_principal_ent(
 	shared_ptr<const Context> pc,

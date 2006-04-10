@@ -52,7 +52,14 @@ PasswordContext::PasswordContext(
 	const int port
 )	:	Context(client, realm, host, port)
 {
-	// TODO Require password not empty (to prevent input on tty)
+	if (password.empty()) {
+		throw bad_pw(KADM5_BAD_PASSWORD);
+	}
+	
+	// FIXME This is buggy in Heimdal. If password is correct, the
+	// the libraries will prompt for the password a second time(!).
+	// If the password was wrong, a bad_pw exception will be thrown
+	// immediately.
 	void* ph = NULL;
 	error::throw_on_error(
 		kadm5_init_with_password_ctx(

@@ -31,60 +31,74 @@
  *****************************************************************************/
 /* $Id$ */
 
-#ifndef PASSWORDCONTEXT_HPP_
-#define PASSWORDCONTEXT_HPP_
-
 // STL and Boost
 #include <string>
 
+// Kerberos
+#include <krb5.h>
+#include <heimdal/kadm5/admin.h>
+
 // Local
-#include "Context.hpp"
+#include "CCacheContext.hpp"
+#include "Error.hpp"
 
 namespace kadm5
 {
-
+	
 using std::string;
 
-/**
- * \brief
- * Kerberos and KAdmin Context using password authentication.
- * 
- * \author Peter Dinges <me@elwedgo.de>
- **/
-class PasswordContext : public Context
+CCacheContext::CCacheContext(
+	const string& ccname,
+	const string& realm,
+	const string& host,
+	const int port
+)	:	Context("", realm, host, port),
+		_ccache(NULL)
 {
-public:
-	/**
-	 * Constructs a new PasswordContext with the given connection data.
-	 * 
-	 * \param	password	Connect to the KAdmin server using
-	 * 			this password.
-	 * \param	client	The principal we identify ourselves as to the
-	 * 			KAdmin server. If empty, the Kerberos
-	 * 			libraries' default value will be used.
-	 * \param	realm	The Kerberos realm for this context (will be
-	 * 			used as default for all principals if no
-	 * 			realm was specified).
-	 * 			If empty, the default realm will be used.
-	 * \param	host	The KAdmin server's hostname to connect to.
-	 * 			If empty, the used realm's
-	 * 			<code>admin_server</code> config parameter
-	 * 			will be used.
-	 * \param	port	The KAdmin server's port number.
-	 * 			If <code>0</code>, use the libraries' default
-	 * 			port number.
-	 * 
-	 * \todo	Check for empty password and throw exception.
-	 **/
-	explicit PasswordContext(
-		const string& password,
-		const string& client,
-		const string& realm,
-		const string& host,
-		const int port
+	KADM5_DEBUG("CCacheContext::CCacheContext(): Constructing...\n");
+	
+	// Tricky: 'this' is not yet completely initialized so be careful(!)
+	string f = ccname.empty() ? krb5_cc_default_name(*this) : ccname;
+	if (f.find(":") == string::npos) {
+		f.insert(0, "FILE:");
+	}
+
+	KADM5_DEBUG(
+		"CCacheContext(): Opening credential cache '" + f + "'\n"
 	);
-};
+	krb5_cc_resolve(*this, f.c_str(), &_ccache);
+	
+	// Test whether credential cache exists; kadm5_init_... won't do it.
+	krb5_principal ptmp = NULL;
+	error::throw_on_error( krb5_cc_get_principal(*this, _ccache, &ptmp) );
+	krb5_free_principal(*this, ptmp);
+
+	void* ph = NULL;
+	error::throw_on_error(
+		kadm5_init_with_creds_ctx(
+			*this,
+			NULL,
+			_ccache,
+			KADM5_ADMIN_SERVICE,
+			config_params().get(),
+			KADM5_STRUCT_VERSION,
+			KADM5_API_VERSION_2,
+			&ph
+		)
+	);
+	set_kadm_handle( shared_ptr<void>(ph, kadm5_destroy) );
+}
+
+
+CCacheContext::~CCacheContext()
+{
+	// Tricky aswell: Context part of 'this' still exists right now.
+	if (_ccache) {
+		KADM5_DEBUG("~CCacheContext(): Closing credential cache\n");
+		krb5_cc_close(*this, _ccache);
+		_ccache = NULL;
+	}
+	KADM5_DEBUG("~CCacheContext(): Destructed.\n");	
+}
 
 } /* namespace kadm5 */
-
-#endif /*PASSWORDCONTEXT_HPP_*/

@@ -191,6 +191,8 @@ void error::throw_on_error(int32_t c)
 			// memory shortage. How does this affect thread-
 			// safety?
 			throw std::bad_alloc();
+		case EINVAL:
+			throw bad_param(c);
 
 		default:
 			throw error(c);

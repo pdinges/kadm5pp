@@ -79,6 +79,12 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(
 	1, 5
 );
 
+BOOST_PYTHON_FUNCTION_OVERLOADS(
+	Connection_from_credential_cache_overloads,
+	kadm5::Connection::from_credential_cache,
+	0, 4
+);
+
 
 /*
  * Exceptions
@@ -196,6 +202,12 @@ BOOST_PYTHON_MODULE(kadm5)
 			Connection_from_password_overloads()
 		)
 		.staticmethod("from_password")
+		.def(
+			"from_credential_cache",
+			kadm5::Connection::from_credential_cache,
+			Connection_from_credential_cache_overloads()
+		)
+		.staticmethod("from_credential_cache")
 	;
 	
 	/*

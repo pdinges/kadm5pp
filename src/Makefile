@@ -1,5 +1,5 @@
 #objects = Error.o PasswordGenerator.o Context.o PasswordContext.o Connection.o Principal.o
-objects = Error.o Context.o PasswordContext.o Connection.o Principal.o kadm5.o
+objects = Error.o Context.o PasswordContext.o CCacheContext.o Connection.o Principal.o kadm5.o
 
 .PHONY: clean
 
