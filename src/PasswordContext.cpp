@@ -54,7 +54,7 @@ PasswordContext::PasswordContext(
 {
 	// TODO Require password not empty (to prevent input on tty)
 	void* ph = NULL;
-	Error::throw_on_error(
+	error::throw_on_error(
 		kadm5_init_with_password_ctx(
 			*this,
 			client.empty() ? NULL : client.c_str(),
@@ -70,7 +70,7 @@ PasswordContext::PasswordContext(
 	
 	// Check connection.
 	u_int32_t p;
-	Error::throw_on_error(
+	error::throw_on_error(
 		kadm5_get_privs(*this, &p)
 	);
 }

@@ -83,7 +83,7 @@ shared_ptr<Principal> Connection::create_principal(
 ) const
 {
 	if (!may_add()) {
-		throw AddAuthError(KADM5_AUTH_ADD);
+		throw add_auth_missing(KADM5_AUTH_ADD);
 	}
 	
 	shared_ptr< vector<string> > pexisting( list_principals(name) );
@@ -91,7 +91,7 @@ shared_ptr<Principal> Connection::create_principal(
 	// A bad principal name will throw an exception in list_principals(),
 	// so this test will work correctly.
 	if (!pexisting->empty()) {
-		throw AlreadyExists(0);
+		throw already_exists(KADM5_DUP);
 	}
 
 	shared_ptr<Principal> pp(
@@ -105,7 +105,7 @@ shared_ptr<Principal> Connection::create_principal(
 void Connection::delete_principal(const string& id) const
 {
 	Principal p(_context, id);
-	Error::throw_on_error(
+	error::throw_on_error(
 		kadm5_delete_principal(*_context, p._id.get())
 	);
 }
@@ -114,7 +114,7 @@ void Connection::delete_principal(const string& id) const
 shared_ptr<Principal> Connection::get_principal(const string& id) const
 {
 	if (!may_get()) {
-		throw GetAuthError(KADM5_AUTH_GET);
+		throw get_auth_missing(KADM5_AUTH_GET);
 	}
 	
 	shared_ptr< vector<string> > pcandidates( list_principals(id) );
@@ -127,10 +127,10 @@ shared_ptr<Principal> Connection::get_principal(const string& id) const
 		return pret;
 	}
 	else if (pcandidates->size() < 1) {
-		throw UnknownPrincipalError(KADM5_UNK_PRINC);
+		throw unknown_principal(KADM5_UNK_PRINC);
 	}
 	else {
-		throw AmbiguousKeyError(KADM5_AMBIGUOUS_KEY);
+		throw ambiguous_name(0);
 	}
 }
 
@@ -139,7 +139,7 @@ shared_ptr< vector< shared_ptr<Principal> > > Connection::get_principals(
 	const string& filter
 ) const {
 	if (!may_get()) {
-		throw GetAuthError(KADM5_AUTH_GET);
+		throw add_auth_missing(KADM5_AUTH_GET);
 	}
 	
 	shared_ptr< vector<string> > pnames( list_principals(filter) );
@@ -167,14 +167,14 @@ shared_ptr< vector<string> > Connection::list_principals(
 	const string& filter
 ) const {
 	if (!may_list()) {
-		throw ListAuthError(KADM5_AUTH_LIST);
+		throw list_auth_missing(KADM5_AUTH_LIST);
 	}
 
 	char** list = NULL;
 	int count = 0;
 	
 	try {
-		Error::throw_on_error(
+		error::throw_on_error(
 			kadm5_get_principals(
 				*_context,
 				filter.c_str(),
@@ -203,7 +203,7 @@ const bool Connection::has_privilege(u_int32_t flags) const
 {
 	u_int32_t p;
 
-	Error::throw_on_error(
+	error::throw_on_error(
 		kadm5_get_privs(*_context, &p)
 	);
 	

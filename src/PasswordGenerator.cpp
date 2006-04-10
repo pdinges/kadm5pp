@@ -54,7 +54,7 @@ PasswordGenerator::PasswordGenerator(const vector<CharacterClass>& characterClas
 	:	_characterClasses(characterClasses)
 {
 	if (!characterClasses.size()) {
-		throw ParamError(0);
+		throw bad_char_class(0);
 	}
 }
 

@@ -66,11 +66,11 @@ Context::Context(
 {
 	KADM5_DEBUG("Context::Context(): Constructing...\n");
 	krb5_context_data* pc = NULL;
-	Error::throw_on_error( krb5_init_context(&pc) );
+	error::throw_on_error( krb5_init_context(&pc) );
 	_krb_context.reset(pc, krb5_free_context);
 	
 	if (!realm.empty()) {
-		Error::throw_on_error(
+		error::throw_on_error(
 			krb5_set_default_realm(
 				_krb_context.get(),
 				realm.c_str()
@@ -155,7 +155,7 @@ shared_ptr<krb5_principal_data> parse_name(
 ) {
 	krb5_principal_data* ptmp = NULL;
 
-	Error::throw_on_error( krb5_parse_name(*pc, name.c_str(), &ptmp) );
+	error::throw_on_error( krb5_parse_name(*pc, name.c_str(), &ptmp) );
 	shared_ptr<krb5_principal_data> pret(
 		ptmp, boost::bind(delete_krb5_principal, pc, _1)
 	);
@@ -168,7 +168,7 @@ string unparse_name(shared_ptr<const Context> pc, krb5_const_principal pp)
 {
 	char* tmp = NULL;
 	
-	Error::throw_on_error( krb5_unparse_name(*pc, pp, &tmp) );
+	error::throw_on_error( krb5_unparse_name(*pc, pp, &tmp) );
 	std::auto_ptr<char> name(tmp);
 	
 	return string(name.get());	

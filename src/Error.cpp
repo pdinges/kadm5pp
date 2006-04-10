@@ -31,9 +31,11 @@
  *****************************************************************************/
 /* $Id$ */
 
+// Local
 #include "Error.hpp"
 
 #ifdef DEBUG
+	#include <iostream>
 	void kadm5::debug(const std::string& msg) { std::cout << msg; }
 #endif
 
@@ -41,99 +43,157 @@
 namespace kadm5
 {
 
-void Error::throw_on_error(int32_t c)
+void error::throw_on_error(int32_t c)
 {
 	switch(c) {
 		case 0L:
+		case KRB5KDC_ERR_NONE:
 			return;
-
-		case KADM5_AUTH_INSUFFICIENT:
-			throw AuthError(c);
-		case KADM5_AUTH_GET:
-			throw GetAuthError(c);
-		case KADM5_AUTH_ADD:
-			throw AddAuthError(c);
-		case KADM5_AUTH_MODIFY:
-			throw ModifyAuthError(c);
-		case KADM5_AUTH_DELETE:
-			throw DeleteAuthError(c);
-		case KADM5_AUTH_LIST:
-			throw ListAuthError(c);
-		case KADM5_AUTH_CHANGEPW:
-			throw ChangePasswordAuthError(c);
-
-		case KADM5_UNK_PRINC:
-			throw UnknownPrincipalError(c);
-		case KADM5_UNK_POLICY:
-			throw UnknownPolicyError(c);
-		case KADM5_BAD_MASK:
-			throw MaskError(c);
-		case KADM5_BAD_CLASS:
-			throw ClassError(c);
-		case KADM5_BAD_LENGTH:
-			throw LengthError(c);
-		case KADM5_BAD_POLICY:
-			throw PolicyError(c);
-		case KADM5_BAD_PRINCIPAL:
-			throw PrincipalError(c);
-		case KADM5_BAD_AUX_ATTR:
-			throw AuxAttributeError(c);
-		case KADM5_BAD_HISTORY:
-			throw HistoryError(c);
-		case KADM5_BAD_MIN_PASS_LIFE:
-			throw MinPasswordLifeError(c);
-
-		case KADM5_PASS_Q_TOOSHORT:
-			throw PwTooShortError(c);
-		case KADM5_PASS_Q_CLASS:
-			throw PwClassError(c);
-		case KADM5_PASS_Q_DICT:
-			throw DictionaryPwError(c);
-
-		case KADM5_BAD_STRUCT_VERSION:
-		case KADM5_OLD_STRUCT_VERSION:
-		case KADM5_NEW_STRUCT_VERSION:
-			throw StructVersionError(c);
-		case KADM5_BAD_API_VERSION:
-		case KADM5_OLD_LIB_API_VERSION:
-		case KADM5_OLD_SERVER_API_VERSION:
-		case KADM5_NEW_LIB_API_VERSION:
-		case KADM5_NEW_SERVER_API_VERSION:
-			throw ApiVersionError(c);
-
 		case KADM5_FAILURE:
-			throw Error(c);
-		case KADM5_BAD_DB:
-			throw DBError(c);
-//		case KADM5_:
-//			throw Error(c);
+			throw error(c);
 
-// TODO Add cases for the following error values:		
-//#define KADM5_BAD_DB                             (43787526L)
-//#define KADM5_DUP                                (43787527L)
-//#define KADM5_RPC_ERROR                          (43787528L)
-//#define KADM5_NO_SRV                             (43787529L)
-//#define KADM5_BAD_HIST_KEY                       (43787530L)
-//#define KADM5_NOT_INIT                           (43787531L)
-//
-//#define KADM5_PASS_REUSE                         (43787545L)
-//#define KADM5_PASS_TOOSOON                       (43787546L)
-//#define KADM5_POLICY_REF                         (43787547L)
-//#define KADM5_INIT                               (43787548L)
-//#define KADM5_BAD_PASSWORD                       (43787549L)
-//#define KADM5_PROTECT_PRINCIPAL                  (43787550L)
-//#define KADM5_BAD_SERVER_HANDLE                  (43787551L)
-//
-//#define KADM5_SECURE_PRINC_MISSING               (43787560L)
-//#define KADM5_NO_RENAME_SALT                     (43787561L)
-//#define KADM5_BAD_CLIENT_PARAMS                  (43787562L)
-//#define KADM5_BAD_SERVER_PARAMS                  (43787563L)
-//#define KADM5_BAD_TL_TYPE                        (43787566L)
-//#define KADM5_MISSING_CONF_PARAMS                (43787567L)
-//#define KADM5_BAD_SERVER_NAME                    (43787568L)
+
+		// KAdmin general errors
+		case KADM5_BAD_SERVER_HANDLE:
+			throw bad_handle(c);
+		case KADM5_BAD_DB:
+			throw bad_db(c);
+		case KADM5_BAD_HIST_KEY:
+			throw key_history_mismatch(c);
+		case KADM5_SECURE_PRINC_MISSING:
+			throw secure_principal_missing(c);
+		case KADM5_NO_RENAME_SALT:
+			throw salt_prevents_rename(c);
+		case KADM5_BAD_TL_TYPE:
+			throw bad_tl_type(c);
+
+
+		// KAdmin config errors
+		case KADM5_BAD_CLIENT_PARAMS:
+			throw remote_config_error(c);
+		case KADM5_BAD_SERVER_PARAMS:
+			throw local_config_error(c);
+		case KADM5_MISSING_CONF_PARAMS:
+			throw params_missing(c);
+		case KADM5_BAD_SERVER_NAME:
+			throw bad_server(c);
+
+
+		// KAdmin connection errors
+		case KADM5_RPC_ERROR:
+			throw rpc_error(c);
+		case KADM5_NO_SRV:
+			throw no_server(c);
+		case KADM5_NOT_INIT:
+			throw not_initialized(c);
+		case KADM5_INIT:
+			throw already_initialized(c);
+		case KADM5_BAD_PASSWORD:
+			throw bad_pw(c);
+
+
+		// KAdmin authentication errors
+		case KADM5_AUTH_INSUFFICIENT:
+			throw auth_missing(c);
+		case KADM5_AUTH_GET:
+			throw get_auth_missing(c);
+		case KADM5_AUTH_ADD:
+			throw add_auth_missing(c);
+		case KADM5_AUTH_MODIFY:
+			throw modify_auth_missing(c);
+		case KADM5_AUTH_DELETE:
+			throw delete_auth_missing(c);
+		case KADM5_AUTH_LIST:
+			throw list_auth_missing(c);
+		case KADM5_AUTH_CHANGEPW:
+			throw cpw_auth_missing(c);
+#ifdef KADM5_AUTH_SETKEY
+		case KADM5_AUTH_SETKEY:
+			throw setkey_auth_missing(c);
+#endif
+		
+
+		// KAdmin function parameter errors
+		case KADM5_DUP:
+			throw already_exists(c);
+		case KADM5_UNK_PRINC:
+			throw unknown_principal(c);
+		case KADM5_UNK_POLICY:
+			throw unknown_policy(c);
+		case KADM5_BAD_MASK:
+			throw bad_mask(c);
+		case KADM5_BAD_CLASS:
+			throw bad_char_class(c);
+		case KADM5_BAD_LENGTH:
+			throw bad_pw_length(c);
+		case KADM5_BAD_POLICY:
+			throw bad_policy(c);
+		case KADM5_BAD_PRINCIPAL:
+			throw bad_principal(c);
+		case KADM5_BAD_AUX_ATTR:
+			throw bad_aux_attr(c);
+		case KADM5_BAD_HISTORY:
+			throw bad_pw_history(c);
+		case KADM5_BAD_MIN_PASS_LIFE:
+			throw bad_min_pw_life(c);
+		case KADM5_POLICY_REF:
+			throw policy_in_use(c);
+		case KADM5_PROTECT_PRINCIPAL:
+			throw principal_protected(c);
+#ifdef KADM5_SETKEY_DUP_ENCTYPES
+		case KADM5_SETKEY_DUP_ENCTYPES:
+			throw duplicate_enctype(c);
+#endif
+
+
+		// KAdmin password quality errors
+		case KADM5_PASS_Q_TOOSHORT:
+			throw pw_too_short(c);
+		case KADM5_PASS_Q_CLASS:
+			throw too_few_char_classes(c);
+		case KADM5_PASS_Q_DICT:
+			throw pw_in_dictionary(c);
+		case KADM5_PASS_REUSE:
+			throw pw_reuse(c);
+		case KADM5_PASS_TOOSOON:
+			throw too_soon(c);
+
+
+		// KAdmin version errors
+		case KADM5_BAD_STRUCT_VERSION:
+			throw bad_struct_version(c);
+		case KADM5_OLD_STRUCT_VERSION:
+			throw old_struct_version(c);
+		case KADM5_NEW_STRUCT_VERSION:
+			throw new_struct_version(c);
+		case KADM5_BAD_API_VERSION:
+			throw bad_api_version(c);
+		case KADM5_OLD_LIB_API_VERSION:
+			throw old_lib_api(c);
+		case KADM5_OLD_SERVER_API_VERSION:
+			throw old_server_api(c);
+		case KADM5_NEW_LIB_API_VERSION:
+			throw new_lib_api(c);
+		case KADM5_NEW_SERVER_API_VERSION:
+			throw new_server_api(c);
+
+
+		// Kerberos 5 and system errors
+		// (actually returned values only --- see Kerberos 5 API for
+		// details on which function may return which value).
+
+		// Treat malformed principal name errors like
+		// KADM5_BAD_PRINCIPAL
+		case KRB5_PARSE_MALFORMED:
+			throw bad_principal(c);
+		case ENOMEM:
+			// FIXME Have a preallocated instance to throw on
+			// memory shortage. How does this affect thread-
+			// safety?
+			throw std::bad_alloc();
 
 		default:
-			throw Error(c);
+			throw error(c);
 	}
 }
 

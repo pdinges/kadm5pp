@@ -139,7 +139,7 @@ void Principal::set_name(const string& name)
 {
 	// Provide best exception safety here
 	krb5_principal pnew = NULL;
-	Error::throw_on_error( krb5_parse_name(*_context, name.c_str(), &pnew) );
+	error::throw_on_error( krb5_parse_name(*_context, name.c_str(), &pnew) );
 	
 	krb5_principal ptmp = _data->principal;
 	_data->principal = pnew;
@@ -376,7 +376,7 @@ void Principal::load() const
 	_data->principal = NULL;
 
 	try {
-		Error::throw_on_error(
+		error::throw_on_error(
 			kadm5_get_principal(
 				*_context,
 				_id.get(),
@@ -388,7 +388,7 @@ void Principal::load() const
 
 		_exists = true;
 	}
-	catch (UnknownPrincipalError) {
+	catch (unknown_principal) {
 		KADM5_DEBUG("Principal::load(): Fetching default values.\n");
 
 		// Load defaults then (== get default principal)
@@ -396,14 +396,14 @@ void Principal::load() const
 		// if name and realm were changed.
 		shared_ptr<krb5_realm> prealm( krb5_princ_realm(*_context, pbackup) );
 
-		Error::throw_on_error(
+		error::throw_on_error(
 			krb5_make_principal(*_context, &ptmp, *prealm, "default", NULL)
 		);
 		shared_ptr<krb5_principal_data> pdefault(
 			ptmp, boost::bind(delete_krb5_principal, _context, _1)
 		);
 		
-		Error::throw_on_error(
+		error::throw_on_error(
 			kadm5_get_principal(
 				*_context,
 				pdefault.get(),
@@ -429,7 +429,7 @@ void Principal::apply_create()
 //		randomize_password();
 	}
 	
-	Error::throw_on_error(
+	error::throw_on_error(
 		kadm5_create_principal(
 			*_context,
 			_data.get(),
@@ -456,7 +456,7 @@ void Principal::apply_create()
 void Principal::apply_rename()
 {
 	KADM5_DEBUG("Principal::apply_rename()\n");
-	Error::throw_on_error(
+	error::throw_on_error(
 		kadm5_rename_principal(
 			*_context,
 			_id.get(),
@@ -481,7 +481,7 @@ void Principal::apply_modify() const
 	krb5_principal ptmp = _data->principal;
 	_data->principal = _id.get();
 	
-	Error::throw_on_error(
+	error::throw_on_error(
 		kadm5_modify_principal(
 			*_context,
 			_data.get(),
@@ -498,7 +498,7 @@ void Principal::apply_password() const
 {
 	if (_password) {
 		KADM5_DEBUG("Principal::apply_password(): Changing password.\n");
-		Error::throw_on_error(
+		error::throw_on_error(
 			kadm5_chpass_principal(*_context, _id.get(), _password)
 		);
 		

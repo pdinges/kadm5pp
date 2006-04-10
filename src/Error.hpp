@@ -61,6 +61,8 @@
 
 namespace kadm5
 {
+	
+using std::string;
 
 /**
  * \brief
@@ -83,16 +85,16 @@ namespace kadm5
  * \todo 	Inherit from std::exception and provide a string translation
  * 		for the error code (use library error tables).
  **/
-class Error
+class error: public std::exception
 {
 public:
 	/**
-	 * Constructs a new Error with the given error code.
+	 * Constructs a new instance with the given error code.
 	 * 
 	 * \param	c	The error's number as defined in <krb5_err.h>
 	 * 			or <kadm5/kadm5_err.h>.
 	 **/
-	explicit Error(int32_t c) : _error_code(c) {}
+	explicit error(int32_t c) : _error_code(c) {}
 	
 	/**
 	 * Get this exception's error code as returned by the Kerberos or
@@ -133,67 +135,146 @@ private:
 	int32_t _error_code;
 };
 
-// TODO Maybe rename classes and remove Error suffix?
+/*
+ * General errors (of no specific category)
+ */
+struct bad_handle: public error
+	{ bad_handle(int32_t c) : error(c) {} };
+struct bad_db: public error
+	{ bad_db(int32_t c) : error(c) {} };
+struct key_history_mismatch: public error
+	{ key_history_mismatch(int32_t c) : error(c) {} };
+struct secure_principal_missing: public error
+	{ secure_principal_missing(int32_t c) : error(c) {} };
+struct salt_prevents_rename: public error
+	{ salt_prevents_rename(int32_t c) : error(c) {} };
+struct bad_tl_type: public error
+	{ bad_tl_type(int32_t c) : error(c) {} };
 
-// TODO Rename to auth_missing, get_auth_missing, ...
-struct AuthError:		public Error { AuthError(int32_t c) : Error(c) {} };
-struct GetAuthError:		public AuthError { GetAuthError(int32_t c) : AuthError(c) {} };
-struct AddAuthError:		public AuthError { AddAuthError(int32_t c) : AuthError(c) {} };
-struct ModifyAuthError:		public AuthError { ModifyAuthError(int32_t c) : AuthError(c) {} };
-struct DeleteAuthError:		public AuthError { DeleteAuthError(int32_t c) : AuthError(c) {} };
-struct ListAuthError:		public AuthError { ListAuthError(int32_t c) : AuthError(c) {} };
-struct ChangePasswordAuthError:	public AuthError { ChangePasswordAuthError(int32_t c) : AuthError(c) {} };
+/*
+ * Configuration errors
+ */
+struct config_error: public error
+	{ config_error(int32_t c) : error(c) {} };
+struct remote_config_error: public config_error
+	{ remote_config_error(int32_t c) : config_error(c) {} };
+struct local_config_error: public config_error
+	{ local_config_error(int32_t c) : config_error(c) {} };
+struct params_missing: public config_error
+	{ params_missing(int32_t c) : config_error(c) {} };
+struct bad_server: public config_error
+	{ bad_server(int32_t c) : config_error(c) {} };
 
-struct ConfigError:		public Error { ConfigError(int32_t c) : Error(c) {} };
-struct DBError:			public ConfigError { DBError(int32_t c) : ConfigError(c) {} };
+/*
+ * Connection errors
+ */
+struct connection_error: public error
+	{ connection_error(int32_t c) : error(c) {} };
+struct rpc_error: public connection_error
+	{ rpc_error(int32_t c) : connection_error(c) {} };
+struct no_server: public connection_error
+	{ no_server(int32_t c) : connection_error(c) {} };
+struct not_initialized: public connection_error
+	{ not_initialized(int32_t c) : connection_error(c) {} };
+struct already_initialized: public connection_error
+	{ already_initialized(int32_t c) : connection_error(c) {} };
+struct bad_pw: public connection_error
+	{ bad_pw(int32_t c) : connection_error(c) {} };
 
-struct ParamError:		public Error { ParamError(int32_t c) : Error(c) {} };
-struct UnknownPrincipalError:	public ParamError { UnknownPrincipalError(int32_t c) : ParamError(c) {} };
-struct UnknownPolicyError:	public ParamError { UnknownPolicyError(int32_t c) : ParamError(c) {} };
-struct MaskError:		public ParamError { MaskError(int32_t c) : ParamError(c) {} };
-struct ClassError:		public ParamError { ClassError(int32_t c) : ParamError(c) {} };
-struct LengthError:		public ParamError { LengthError(int32_t c) : ParamError(c) {} };
-struct PolicyError:		public ParamError { PolicyError(int32_t c) : ParamError(c) {} };
-struct PrincipalError:		public ParamError { PrincipalError(int32_t c) : ParamError(c) {} };
-struct AuxAttributeError:	public ParamError { AuxAttributeError(int32_t c) : ParamError(c) {} };
-struct HistoryError:		public ParamError { HistoryError(int32_t c) : ParamError(c) {} };
-struct MinPasswordLifeError:	public ParamError { MinPasswordLifeError(int32_t c) : ParamError(c) {} };
-struct AmbiguousKeyError:	public ParamError { AmbiguousKeyError(int32_t c) : ParamError(c) {} };
-struct AlreadyExists:		public ParamError { AlreadyExists(int32_t c) : ParamError(c) {} };
+/*
+ * Authentication errors (missing privileges)
+ */
+struct auth_missing: public error
+	{ auth_missing(int32_t c) : error(c) {} };
+struct get_auth_missing: public auth_missing
+	{ get_auth_missing(int32_t c) : auth_missing(c) {} };
+struct add_auth_missing: public auth_missing
+	{ add_auth_missing(int32_t c) : auth_missing(c) {} };
+struct modify_auth_missing: public auth_missing
+	{ modify_auth_missing(int32_t c) : auth_missing(c) {} };
+struct delete_auth_missing: public auth_missing
+	{ delete_auth_missing(int32_t c) : auth_missing(c) {} };
+struct list_auth_missing: public auth_missing
+	{ list_auth_missing(int32_t c) : auth_missing(c) {} };
+struct cpw_auth_missing: public auth_missing
+	{ cpw_auth_missing(int32_t c) : auth_missing(c) {} };
+struct setkey_auth_missing: public auth_missing
+	{ setkey_auth_missing(int32_t c) : auth_missing(c) {} };
 
-struct PwQualityError:		public Error { PwQualityError(int32_t c) : Error(c) {} };
-struct PwTooShortError:		public PwQualityError { PwTooShortError(int32_t c) : PwQualityError(c) {} };
-struct PwClassError:		public PwQualityError { PwClassError(int32_t c) : PwQualityError(c) {} };
-struct DictionaryPwError:	public PwQualityError { DictionaryPwError(int32_t c) : PwQualityError(c) {} };
+/*
+ * Bad function parameters
+ */
+struct bad_param: public error
+	{ bad_param(int32_t c) : error(c) {} };
+struct already_exists: public bad_param
+	{ already_exists(int32_t c) : bad_param(c) {} };
+struct unknown_principal: public bad_param
+	{ unknown_principal(int32_t c) : bad_param(c) {} };
+struct unknown_policy: public bad_param
+	{ unknown_policy(int32_t c) : bad_param(c) {} };
+struct bad_mask: public bad_param
+	{ bad_mask(int32_t c) : bad_param(c) {} };
+struct bad_char_class: public bad_param
+	{ bad_char_class(int32_t c) : bad_param(c) {} };
+struct bad_pw_length: public bad_param
+	{ bad_pw_length(int32_t c) : bad_param(c) {} };
+struct bad_policy: public bad_param
+	{ bad_policy(int32_t c) : bad_param(c) {} };
+struct bad_principal: public bad_param
+	{ bad_principal(int32_t c) : bad_param(c) {} };
+struct bad_aux_attr: public bad_param
+	{ bad_aux_attr(int32_t c) : bad_param(c) {} };
+struct bad_pw_history: public bad_param
+	{ bad_pw_history(int32_t c) : bad_param(c) {} };
+struct bad_min_pw_life: public bad_param
+	{ bad_min_pw_life(int32_t c) : bad_param(c) {} };
+struct policy_in_use: public bad_param
+	{ policy_in_use(int32_t c) : bad_param(c) {} };
+struct principal_protected: public bad_param
+	{ principal_protected(int32_t c) : bad_param(c) {} };
+struct duplicate_enctype: public bad_param
+	{ duplicate_enctype(int32_t c) : bad_param(c) {} };
+struct ambiguous_name: public bad_param
+	{ ambiguous_name(int32_t c) : bad_param(c) {} };
 
-struct VersionError:		public Error { VersionError(int32_t c) : Error(c) {} };
-struct StructVersionError:	public VersionError { StructVersionError(int32_t c) : VersionError(c) {} };
-struct ApiVersionError:		public VersionError { ApiVersionError(int32_t c) : VersionError(c) {} };
+/*
+ * Password quality errors
+ */
+struct pw_quality_error: public error
+	{ pw_quality_error(int32_t c) : error(c) {} };
+struct pw_too_short: public pw_quality_error
+	{ pw_too_short(int32_t c) : pw_quality_error(c) {} };
+struct too_few_char_classes: public pw_quality_error
+	{ too_few_char_classes(int32_t c) : pw_quality_error(c) {} };
+struct pw_in_dictionary: public pw_quality_error
+	{ pw_in_dictionary(int32_t c) : pw_quality_error(c) {} };
+struct pw_reuse: public pw_quality_error
+	{ pw_reuse(int32_t c) : pw_quality_error(c) {} };
+struct too_soon: public pw_quality_error
+	{ too_soon(int32_t c) : pw_quality_error(c) {} };
 
-struct RpcError:		public Error { RpcError(int32_t c) : Error(c) {} };
-struct NoServerError:		public Error { NoServerError(int32_t c) : Error(c) {} };
+/*
+ * Version errors
+ */
+struct version_error: public error
+	{ version_error(int32_t c) : error(c) {} };
+struct bad_struct_version: public version_error
+	{ bad_struct_version(int32_t c) : version_error(c) {} };
+struct old_struct_version: public version_error
+	{ old_struct_version(int32_t c) : version_error(c) {} };
+struct new_struct_version: public version_error
+	{ new_struct_version(int32_t c) : version_error(c) {} };
+struct bad_api_version: public version_error
+	{ bad_api_version(int32_t c) : version_error(c) {} };
+struct old_lib_api: public version_error
+	{ old_lib_api(int32_t c) : version_error(c) {} };
+struct old_server_api: public version_error
+	{ old_server_api(int32_t c) : version_error(c) {} };
+struct new_lib_api: public version_error
+	{ new_lib_api(int32_t c) : version_error(c) {} };
+struct new_server_api: public version_error
+	{ new_server_api(int32_t c) : version_error(c) {} };
 
-
-// TODO Add classes for the following kadmin errors:
-//#define KADM5_DUP                                (43787527L)
-//#define KADM5_BAD_HIST_KEY                       (43787530L)
-//#define KADM5_NOT_INIT                           (43787531L)
-//#define KADM5_PASS_REUSE                         (43787545L)
-//#define KADM5_PASS_TOOSOON                       (43787546L)
-//#define KADM5_POLICY_REF                         (43787547L)
-//#define KADM5_INIT                               (43787548L)
-//#define KADM5_BAD_PASSWORD                       (43787549L)
-//#define KADM5_PROTECT_PRINCIPAL                  (43787550L)
-//#define KADM5_BAD_SERVER_HANDLE                  (43787551L)
-//#define KADM5_SECURE_PRINC_MISSING               (43787560L)
-//#define KADM5_NO_RENAME_SALT                     (43787561L)
-//#define KADM5_BAD_CLIENT_PARAMS                  (43787562L)
-//#define KADM5_BAD_SERVER_PARAMS                  (43787563L)
-//#define KADM5_BAD_TL_TYPE                        (43787566L)
-//#define KADM5_MISSING_CONF_PARAMS                (43787567L)
-//#define KADM5_BAD_SERVER_NAME                    (43787568L)
-
-// TODO Add classes for krb5 errors.
 
 } /* namespace kadm5 */
 
