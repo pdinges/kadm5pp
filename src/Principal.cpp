@@ -33,9 +33,10 @@
 
 // STL and Boost
 #include <cstring>
-#include <memory>
 #include <boost/bind.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/shared_array.hpp>
+#include <boost/shared_ptr.hpp>
 
 // Kerberos
 #include <heimdal/kadm5/admin.h>
@@ -47,7 +48,11 @@
 namespace kadm5
 {
 
-using std::auto_ptr;
+using boost::posix_time::ptime;
+using boost::posix_time::time_duration;
+using boost::shared_array;
+using boost::shared_ptr;
+using std::string;
 
 
 Principal::Principal(
@@ -63,7 +68,7 @@ Principal::Principal(
 	_exists(false),
 	_modified_mask(0)
 {
-	KADM5_DEBUG("Principal::Principal(): Constructing...\n");
+	KADM5_DEBUG("Principal(): Constructing...\n");
 	_data.reset(
 		new kadm5_principal_ent_rec,
 		boost::bind(delete_kadm5_principal_ent, _context, _1)
@@ -84,7 +89,7 @@ Principal::~Principal()
 		_data->principal = NULL;
 	}
 	wipe(_password);
-	KADM5_DEBUG("Principal::~Principal(): Destroyed.\n");
+	KADM5_DEBUG("~Principal(): Destroyed.\n");
 }
 
 
@@ -105,7 +110,7 @@ const bool Principal::modified() const
 {
 	return	!exists_on_server() ||
 		(_modified_mask != 0) ||
-		(_password != NULL);
+		(_password.get() != NULL);
 }
 
 
@@ -115,7 +120,7 @@ void Principal::commit_modifications()
 		apply_create();
 	}
 	
-	if (_password) {
+	if (_password.get()) {
 		apply_password();
 	}
 	
@@ -153,28 +158,19 @@ void Principal::set_name(const string& name)
 
 void Principal::set_password(const string& password)
 {
-	auto_ptr<char> tmp(new char[password.length() + 1]);
+	shared_array<char> tmp( new char[password.length() + 1] );
 	password.copy(tmp.get(), string::npos);
-	tmp.get()[password.length()] = 0;
+	tmp[password.length()] = 0;
 
-	char* old = _password;
-	_password = tmp.release();
-	
-	wipe(old);
+	_password.swap(tmp);
+	wipe(tmp);
 }
 
 
-//void Principal::randomizePassword(const PasswordGenerator& pwGen)
-//{
-//	string pw = pwGen.randomPassword();
-//	int n = pw.size();
-//
-//	wipePassword();
-//	_password = new char[n+1];
-//
-//	strncpy(_password, pw.c_str(), n);
-//	_password[n] = 0;
-//}
+void Principal::randomize_password(const vector<CharClass>& ccl)
+{
+	set_password(random_password(ccl));
+}
 
 
 const ptime Principal::expire_time() const
@@ -309,21 +305,18 @@ void Principal::set_max_renewable_lifetime(const time_duration& d)
 }
 
 
-//Principal* Principal::getModifier() const
-//{
-//	char* name = NULL;
-//	Principal* ret = NULL;
-//	
-//	if (existsOnServer()) {
-//		_context->unparseName(_data->mod_name, &name);
-//		ret = new Principal(_context, name);
-//		delete name;
-//		
-//		return ret;
-//	} else {
-//		return NULL;
-//	}
-//}
+shared_ptr<Principal> Principal::modifier() const
+{
+	load();
+	return shared_ptr<Principal>(
+		new Principal(
+			_context,
+			exists_on_server() ?
+				unparse_name(_context, _data->mod_name) :
+				_context->client()
+		)
+	);
+}
 
 
 const ptime Principal::modify_time() const
@@ -394,10 +387,19 @@ void Principal::load() const
 		// Load defaults then (== get default principal)
 		// pbackup always points to the right krb5_principal, even
 		// if name and realm were changed.
-		shared_ptr<krb5_realm> prealm( krb5_princ_realm(*_context, pbackup) );
+		
+		// krb5_princ_realm() returns a pointer inside pbackup, so
+		// omit deletion.
+		krb5_realm* prealm = krb5_princ_realm(*_context, pbackup);
 
 		error::throw_on_error(
-			krb5_make_principal(*_context, &ptmp, *prealm, "default", NULL)
+			krb5_make_principal(
+				*_context,
+				&ptmp,
+				*prealm,
+				"default",
+				NULL
+			)
 		);
 		shared_ptr<krb5_principal_data> pdefault(
 			ptmp, boost::bind(delete_krb5_principal, _context, _1)
@@ -425,16 +427,17 @@ void Principal::load() const
 void Principal::apply_create()
 {
 	KADM5_DEBUG("Principal::apply_create()\n");
-	if (!_password) {
-//		randomize_password();
+	if (!_password.get()) {
+		randomize_password();
 	}
 	
 	error::throw_on_error(
 		kadm5_create_principal(
 			*_context,
 			_data.get(),
-			(_modified_mask | KADM5_PRINCIPAL) & (~forbidden_create_flags),
-			_password
+			(_modified_mask | KADM5_PRINCIPAL) &
+				(~forbidden_create_flags),
+			_password.get()
 		)
 	);
 	
@@ -496,10 +499,16 @@ void Principal::apply_modify() const
 
 void Principal::apply_password() const
 {
-	if (_password) {
-		KADM5_DEBUG("Principal::apply_password(): Changing password.\n");
+	if (_password.get()) {
+		KADM5_DEBUG(
+			"Principal::apply_password(): Changing password.\n"
+		);
 		error::throw_on_error(
-			kadm5_chpass_principal(*_context, _id.get(), _password)
+			kadm5_chpass_principal(
+				*_context,
+				_id.get(),
+				_password.get()
+			)
 		);
 		
 		// Wipe password immediately from memory.
@@ -508,14 +517,15 @@ void Principal::apply_password() const
 }
 
 
-void Principal::wipe(char*& cstr) const
+void Principal::wipe(shared_array<char>& cstr) const
 {
-	if (cstr) {
-		KADM5_DEBUG("Principal::wipe(): Wiping password from memory.\n");
-		memset(cstr, 0, strlen(cstr));
-		delete[] cstr;
-		cstr = NULL;
+	if (cstr.get() && cstr.unique()) {
+		KADM5_DEBUG(
+			"Principal::wipe(): Wiping password from memory.\n"
+		);
+		memset(cstr.get(), 0, strlen(cstr.get()));
 	}
+	cstr.reset();
 }
 
 }

@@ -78,8 +78,6 @@ public:
 	 * \param	port	The KAdmin server's port number.
 	 * 			If <code>0</code>, use the libraries' default
 	 * 			port number.
-	 * 
-	 * \todo	Check for empty password and throw exception.
 	 **/
 	explicit CCacheContext(
 		const string& ccname,

@@ -31,44 +31,64 @@
  *****************************************************************************/
 /* $Id$ */
 
-#ifndef PASSWORDGENERATOR_HPP_
-#define PASSWORDGENERATOR_HPP_
+#ifndef RANDOMPASSWORD_HPP_
+#define RANDOMPASSWORD_HPP_
 
 #include <string>
 #include <vector>
 
-#define PWGEN_DEFAULT_CHARACTER_CLASSES { \
+/** Default character classes used for random password generation. */
+#define RANDOMPASSWORD_DEFAULT_CHARACTER_CLASSES { \
 	{ "abcdefghijklmnopqrstuvwxyz", 7 }, \
 	{ "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 2 }, \
 	{ "@$%&*()-+=:,/<>1234567890" , 1 }, \
+	{ "", 0 }, \	// Used to determine the array end.
 }
-#define PWGEN_DEFAULT_CHARACTER_CLASSES_COUNT 3
 
 
-namespace KAdm5
+namespace kadm5
 {
+
 using std::string;
 using std::vector;
 
-
-struct CharacterClass {
+/**
+ * \brief
+ * A character class used by the random password generator random_password().
+ **/
+struct CharClass {
+	/** A string consisting of all characters in this class. */
 	string charset;
+	/**
+	 * The frequency of characters in this class in the generated
+	 * password (how often a character from this class will appear).
+	 **/
 	int frequency;
+	
+	/**
+	 * A list of default CharClasses as used by the <code>kadmin</code>
+	 * commandline program.
+	 **/
+	static const vector<CharClass>& defaults();	
 };
 
-// TODO Refactor this class, maybe remove it altogether
-// and use a global function?
-class PasswordGenerator
-{
-public:
-	PasswordGenerator();
-	PasswordGenerator(const std::vector<CharacterClass>&);
-	string randomPassword() const;
+/**
+ * Generates a random password from the given list of character classes.
+ * The resulting password's length will be the sum of all character classes'
+ * frequencies.
+ * 
+ * \note
+ * This operation may block if the system's entropy pool is empty.
+ * 
+ * \param	ccl	A list of character classes to use for password
+ * 			generation.
+ * \return	A random password consisting of <code>sum(frequencies)</code>
+ * 		characters from the given character classes (in random order).
+ **/
+const string random_password(
+	const vector<CharClass>& ccl =CharClass::defaults()
+);
 
-private:
-	vector<CharacterClass> _characterClasses;
-};
+} /* namespace kadm5 */
 
-}
-
-#endif /*PASSWORDGENERATOR_HPP_*/
+#endif /*RANDOMPASSWORD_HPP_*/

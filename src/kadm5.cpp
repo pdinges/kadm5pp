@@ -41,6 +41,7 @@
 
 #include "Connection.hpp"
 #include "Error.hpp"
+#include "RandomPassword.hpp"
 #include "Principal.hpp"
 
 namespace py=boost::python;
@@ -84,7 +85,21 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(
 	kadm5::Connection::from_credential_cache,
 	0, 4
 );
-
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(
+	Connection_create_principal_overloads,
+	kadm5::Connection::create_principal,
+	1, 2
+);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(
+	Principal_randomize_password_overloads,
+	kadm5::Principal_randomize_password,
+	0, 1
+);
+BOOST_PYTHON_FUNCTION_OVERLOADS(
+	random_password_overloads,
+	kadm5::random_password,
+	0, 1
+);
 
 /*
  * Exceptions
@@ -175,7 +190,11 @@ BOOST_PYTHON_MODULE(kadm5)
 	 * Connection
 	 */
 	py::class_<kadm5::Connection, boost::noncopyable>("Connection", py::no_init)
-		.def("create_principal", &kadm5::Connection::create_principal)
+		.def(
+			"create_principal",
+			&kadm5::Connection::create_principal,
+			Connection_create_principal_overloads()
+		)
 		.def("delete_principal", &kadm5::Connection::delete_principal)
 
 		.def("get_principal", &kadm5::Connection::get_principal)
@@ -231,7 +250,11 @@ BOOST_PYTHON_MODULE(kadm5)
 			&kadm5::Principal::set_name
 		)
 		.def("set_password", &kadm5::Principal::set_password)
-//		.def("randomize_password")
+		.def(
+			"randomize_password",
+			&kadm5::Principal::randomize_password,
+			Principal_randomize_password_overloads()
+		)
 //		.def("randomize_keys")
 		
 		.add_property(
@@ -260,6 +283,7 @@ BOOST_PYTHON_MODULE(kadm5)
 //			&kadm5::Principal::set_key_version
 //		)
 //		.add_property("policy")
+		.add_property("modified", &kadm5::Principal::modifier)
 		.add_property("modify_time", &kadm5::Principal::modify_time)
 		.add_property(
 			"last_password_change",
@@ -269,4 +293,9 @@ BOOST_PYTHON_MODULE(kadm5)
 		.add_property("last_failed", &kadm5::Principal::last_failed)
 	;
 	
+	py::def(
+		"random_password",
+		&kadm5::random_password,
+		random_password_overloads()
+	);
 }

@@ -155,7 +155,7 @@ public:
 	 **/
 	shared_ptr<Principal> create_principal(
 		const string& name,
-		const string& password
+		const string& password =""
 	) const;
 	
 	/**

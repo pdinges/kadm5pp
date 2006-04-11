@@ -1,5 +1,4 @@
-#objects = Error.o PasswordGenerator.o Context.o PasswordContext.o Connection.o Principal.o
-objects = Error.o Context.o PasswordContext.o CCacheContext.o Connection.o Principal.o kadm5.o
+objects = Error.o random_device.o RandomPassword.o Context.o PasswordContext.o CCacheContext.o Connection.o Principal.o kadm5.o
 
 .PHONY: clean
 
@@ -10,6 +9,9 @@ kadm5.so: $(objects)
 
 kadm5.o: kadm5.cpp
 	g++ -c -fPIC -I/usr/include/python2.4/ -o $@ $<
+
+random_device.o: random_device.cpp
+	g++ -c -fPIC -o $@ $<
 
 %.o: %.cpp %.hpp
 	g++ -c -fPIC -o $@ -DDEBUG $<

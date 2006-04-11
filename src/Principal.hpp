@@ -37,9 +37,11 @@
 // STL and Boost
 #include <string>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/shared_array.hpp>
+#include <boost/shared_ptr.hpp>
 
 // Local
-//#include "PasswordGenerator.hpp"
+#include "RandomPassword.hpp"
 #include "Connection.hpp"
 
 namespace kadm5
@@ -47,6 +49,7 @@ namespace kadm5
 	
 using boost::posix_time::ptime;
 using boost::posix_time::time_duration;
+using boost::shared_array;
 using boost::shared_ptr;
 using std::string;
 
@@ -187,8 +190,32 @@ public:
 	 * \param	password	The new password.
 	 **/
 	void set_password(const string& password);
+
+	/**
+	 * Sets a random password for this Principal.
+	 * 
+	 * \note
+	 * There is no way to retrieve the password, effectively making this
+	 * Principal unusable. If you want to set a random password you
+	 * know, use set_password() with random_password().
+	 * 
+	 * \code
+	 * Principal p;
+	 * 
+	 * std::string rpw = random_password();
+	 * p.set_password(rpw);
+	 * 
+	 * // ... tell rpw to the user.
+	 * \endcode
+	 * 
+	 * \param	ccl	List of character classes used in the random
+	 * 			password.
+	 **/
+	void randomize_password(
+		const vector<CharClass>& ccl =CharClass::defaults()
+	);
+
 // TODO Implement.
-//	void randomize_password(const PasswordGenerator& =KAdm5::PasswordGenerator());
 //	void randomize_keys();
 	
 	/**
@@ -279,7 +306,17 @@ public:
 //	const Policy* getPolicy() const;
 //	void setPolicy(Policy*);
 
-//	Principal modifier() const;
+	/**
+	 * Get the Principal who modified this (the current) Principal's
+	 * database entry last. If the current Principal does not yet exist in
+	 * the server database (is freshly created), Context::client() will be
+	 * used.
+	 * 
+	 * \return	The Principal who modified the this Principal's
+	 * 		database entry last. Context::client() if this
+	 * 		Principal was not yet created on the server.
+	 **/
+	shared_ptr<Principal> modifier() const;
 
 	/**
 	 * Get the latest date on which the Principal's database entry was
@@ -392,16 +429,17 @@ private:
 	void apply_password() const;
 	
 	/**
-	 * Helper function to wipe the contents of the given string from
-	 * memory. The string will be set to all <code>0</code>s first and
-	 * then be deallocated.
+	 * Helper function to wipe the contents of the given <code>char</code>
+	 * array pointer from memory. The content will be set to all
+	 * <code>0</code>s first and then the pointer will be set to NULL,
+	 * effectively deallocating held memory.
 	 * 
-	 * It is save to call this function with <code>NULL</code>.
+	 * It is save to call this function with a <code>NULL</code> pointer.
 	 * 
 	 * \param	cstr	The string to wipe from memory.
 	 * 			<code>NULL</code> pointers will be ignored.
 	 **/
-	void wipe(char*& cstr) const;
+	void wipe(shared_array<char>& cstr) const;
 
 	
 	/* Data members */
@@ -416,9 +454,9 @@ private:
 	/** The structure holding all attribute data. See <kadm5/admin.h> */
 	shared_ptr<kadm5_principal_ent_rec> _data; 
 	/** The Principal's password-to-be. */
-	mutable char* _password;	// Use char* instead of string so we
-					// may be sure to wipe the contents
-					// from memory.
+	mutable shared_array<char> _password;	// Use char[] instead of string
+						// so we may be sure to wipe
+						// the contents from memory.
 	/** Flag to check if the data was loaded before. */
 	mutable bool _loaded;
 	/** Flag to check if the Principal has an entry on the server. */

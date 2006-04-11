@@ -34,7 +34,6 @@
 // STL and Boost
 #include <cstdlib>
 #include <cstring>
-#include <memory>
 #include <string>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -104,7 +103,7 @@ const string Context::client() const
 			);
 			string name( ptmps );
 
-			delete ptmps;
+			free(ptmps);
 			krb5_free_principal(_krb_context.get(), pdefp);
 			
 			// FIXME Is this always correct?
@@ -142,7 +141,7 @@ const string Context::realm() const
 		error::throw_on_error(
 			krb5_get_default_realm(_krb_context.get(), &ptmp)
 		);
-		std::auto_ptr<char> pr( ptmp );
+		shared_ptr<char> pr( ptmp, free );
 		
 		return pr.get();
 	}
@@ -155,23 +154,21 @@ const string Context::host() const
 		return _config_params->admin_server;
 	}
 	else {
-		std::auto_ptr<const char> ps(
-			krb5_config_get_string_default(
-				_krb_context.get(),
-				NULL,
-				NULL,
-				"realms",
-				realm().c_str(),
-				"admin_server",
-				NULL
-			)
-		);
+		const char* ps = krb5_config_get_string_default(
+					_krb_context.get(),
+					NULL,
+					NULL,
+					"realms",
+					realm().c_str(),
+					"admin_server",
+					NULL
+				);
 		
 		// "admin_server" config key must exist since construction
 		// would have thrown an exception otherwise (no admin server
 		// known).
-		assert(ps.get() != NULL);
-		string s(ps.get());
+		assert(ps != NULL);
+		string s(ps);
 		
 		return s.substr(0, s.rfind(":"));
 	}
@@ -286,7 +283,7 @@ string unparse_name(shared_ptr<const Context> pc, krb5_const_principal pp)
 	char* tmp = NULL;
 	
 	error::throw_on_error( krb5_unparse_name(*pc, pp, &tmp) );
-	std::auto_ptr<char> name(tmp);
+	shared_ptr<char> name(tmp, free);
 	
 	return string(name.get());	
 }
