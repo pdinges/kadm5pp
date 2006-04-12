@@ -210,9 +210,9 @@ void delete_config_params(kadm5_config_params* pp);
  * Custom deletion function to dispose <code>krb5_principal</code>s on deletion
  * of a holding <code>boost::shared_ptr<krb5_prinicpal_data></code>.
  * 
- * The Context pointer is necessary as the Kerberos libraries required it for
- * the deletion. Use <code>boost::bind</code> to derive a unary function
- * required by the <code>boost::shared_prt</code> constructor:
+ * The Context pointer is necessary as the Kerberos libraries require it for
+ * deletion. Use <code>boost::bind</code> to derive a unary function
+ * for the <code>boost::shared_prt</code> constructor:
  * \code
  * Context pc;
  * boost::shared_ptr<kadm5_principal_ent_rec> pp(
@@ -226,6 +226,20 @@ void delete_config_params(kadm5_config_params* pp);
  * \param	pp	The <code>krb5_principal</code> to delete.
  **/
 void delete_krb5_principal(shared_ptr<const Context> pc, krb5_principal pp);
+
+/**
+ * Creates a deep copy of the given <code>kadm5_principal_ent_t</code>.
+ * 
+ * \param	pc	Smart pointer to the Context the
+ * 			<code>kadm5_principal_ent_t</code> should be created
+ * 			in.
+ * \param	pp	The <code>kadm5_principal_ent_t</code> to copy.
+ * \return	A smart pointer to the freshly created deep copy.
+ **/
+shared_ptr<kadm5_principal_ent_rec> copy_kadm5_principal_ent(
+	shared_ptr<const Context> pc,
+	const kadm5_principal_ent_t pp
+);
 
 /**
  * Custom deletion function to dispose <code>kadm5_principal_ent_t</code>s on

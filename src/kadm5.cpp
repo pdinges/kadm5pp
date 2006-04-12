@@ -92,7 +92,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(
 );
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(
 	Principal_randomize_password_overloads,
-	kadm5::Principal_randomize_password,
+	kadm5::Principal::randomize_password,
 	0, 1
 );
 BOOST_PYTHON_FUNCTION_OVERLOADS(

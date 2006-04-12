@@ -252,6 +252,40 @@ void delete_krb5_principal(shared_ptr<const Context> pc, krb5_principal pp)
 }
 
 
+shared_ptr<kadm5_principal_ent_rec> copy_kadm5_principal_ent(
+	shared_ptr<const Context> pc,
+	const kadm5_principal_ent_t pp
+)
+{
+	KADM5_DEBUG("copy_kadm5_principal_ent()\n");
+
+	shared_ptr<kadm5_principal_ent_rec> pcopy(
+		new kadm5_principal_ent_rec,
+		boost::bind(delete_kadm5_principal_ent, pc, _1)
+	);
+	memcpy(pcopy.get(), pp, sizeof(kadm5_principal_ent_rec));
+	
+	// Ensure nothing gets deleted if an exception is thrown.
+	pcopy->principal = NULL;
+	pcopy->mod_name = NULL;
+	pcopy->policy = NULL;
+	pcopy->n_tl_data = 0;
+	pcopy->n_key_data = 0;
+	pcopy->tl_data = NULL;
+	pcopy->key_data = NULL;
+
+	krb5_copy_principal(*pc, pp->principal, &pcopy->principal);
+	krb5_copy_principal(*pc, pp->mod_name, &pcopy->mod_name);
+	
+	pcopy->policy = new char[strlen(pp->policy) + 1];
+	strcpy(pp->policy, pcopy->policy);
+	
+	// TODO Copy tl_data and key_data aswell.
+	
+	return pcopy;
+}
+
+
 void delete_kadm5_principal_ent(
 	shared_ptr<const Context> pc,
 	kadm5_principal_ent_t pe

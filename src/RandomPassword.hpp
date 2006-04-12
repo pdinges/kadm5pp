@@ -38,11 +38,12 @@
 #include <vector>
 
 /** Default character classes used for random password generation. */
+// The { "", 0 } entry is used to determine the array end.
 #define RANDOMPASSWORD_DEFAULT_CHARACTER_CLASSES { \
 	{ "abcdefghijklmnopqrstuvwxyz", 7 }, \
 	{ "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 2 }, \
 	{ "@$%&*()-+=:,/<>1234567890" , 1 }, \
-	{ "", 0 }, \	// Used to determine the array end.
+	{ "", 0 }, \
 }
 
 

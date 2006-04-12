@@ -120,6 +120,14 @@ public:
 	);
 	
 	/**
+	 * Copy constructor. Produces a deep (complete) copy of the given
+	 * Principapl.
+	 * 
+	 * \param	p	The Principal to copy.
+	 **/
+	Principal(const Principal& p);
+	
+	/**
 	 * Cleans up on destruction (surprise! :-)).
 	 **/
 	virtual ~Principal();

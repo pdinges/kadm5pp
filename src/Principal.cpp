@@ -62,22 +62,51 @@ Principal::Principal(
 ) :
 	_context(context),
 	_id( parse_name(_context, id) ),
-	_data(),
+	_data(
+		shared_ptr<kadm5_principal_ent_rec>(
+			new kadm5_principal_ent_rec,
+			boost::bind(delete_kadm5_principal_ent, _context, _1)
+		)
+	),
 	_password(NULL),
 	_loaded(false),
 	_exists(false),
 	_modified_mask(0)
 {
 	KADM5_DEBUG("Principal(): Constructing...\n");
-	_data.reset(
-		new kadm5_principal_ent_rec,
-		boost::bind(delete_kadm5_principal_ent, _context, _1)
-	);
-	memset(_data.get(), 0, sizeof(kadm5_principal_ent_rec));
+
+	memset(_data.get(), 0, sizeof(kadm5_principal_ent_rec));	
 	_data->principal = _id.get();
 	
 	if (password.length() > 0) {
 		set_password(password);
+	}
+}
+
+
+Principal::Principal(const Principal& p)
+	:	_context(p._context),
+		_data( copy_kadm5_principal_ent(_context, p._data.get()) ),
+		_password(p._password),
+		_loaded(p._loaded),
+		_exists(p._exists),
+		_modified_mask(p._modified_mask)
+{
+	KADM5_DEBUG("Principal(const Principal&)\n");
+
+	if (p._data->principal == p._id.get()) {
+		_id.reset(
+			_data->principal,
+			boost::bind(delete_krb5_principal, _context, _1)
+		);
+	}
+	else {
+		krb5_principal ptmp = NULL;
+		krb5_copy_principal(*_context, p._id.get(), &ptmp);
+		_id.reset(
+			ptmp,
+			boost::bind(delete_krb5_principal, _context, _1)
+		);
 	}
 }
 
@@ -144,7 +173,9 @@ void Principal::set_name(const string& name)
 {
 	// Provide best exception safety here
 	krb5_principal pnew = NULL;
-	error::throw_on_error( krb5_parse_name(*_context, name.c_str(), &pnew) );
+	error::throw_on_error(
+		krb5_parse_name(*_context, name.c_str(), &pnew)
+	);
 	
 	krb5_principal ptmp = _data->principal;
 	_data->principal = pnew;
@@ -423,10 +454,10 @@ void Principal::load() const
 }
 
 
-
 void Principal::apply_create()
 {
 	KADM5_DEBUG("Principal::apply_create()\n");
+
 	if (!_password.get()) {
 		randomize_password();
 	}
@@ -459,6 +490,7 @@ void Principal::apply_create()
 void Principal::apply_rename()
 {
 	KADM5_DEBUG("Principal::apply_rename()\n");
+
 	error::throw_on_error(
 		kadm5_rename_principal(
 			*_context,
