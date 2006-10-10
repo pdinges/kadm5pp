@@ -40,8 +40,8 @@
 // Kerberos
 #include <krb5.h>
 #include <krb5_err.h>
-#include <heimdal/kadm5/admin.h>
-#include <heimdal/kadm5/kadm5_err.h>
+#include <kadm5/admin.h>
+#include <kadm5/kadm5_err.h>
 
 
 #ifdef DEBUG

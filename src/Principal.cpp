@@ -39,7 +39,7 @@
 #include <boost/shared_ptr.hpp>
 
 // Kerberos
-#include <heimdal/kadm5/admin.h>
+#include <kadm5/admin.h>
 
 // Local
 #include "Principal.hpp"

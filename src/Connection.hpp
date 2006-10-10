@@ -41,7 +41,7 @@
 
 // Kerberos
 #include <krb5.h>
-#include <heimdal/kadm5/admin.h>
+#include <kadm5/admin.h>
 
 // Local
 #include "Context.hpp"

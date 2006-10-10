@@ -35,7 +35,7 @@
 #include <string>
 
 // Kerberos
-#include <heimdal/kadm5/admin.h>
+#include <kadm5/admin.h>
 
 // Local
 #include "PasswordContext.hpp"

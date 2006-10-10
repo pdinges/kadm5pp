@@ -38,8 +38,8 @@
 
 // Kerberos
 #include <krb5.h>
-#include <heimdal/kadm5/admin.h>
-#include <heimdal/kadm5/kadm5_err.h>
+#include <kadm5/admin.h>
+#include <kadm5/kadm5_err.h>
 
 // Local
 #include "CCacheContext.hpp"

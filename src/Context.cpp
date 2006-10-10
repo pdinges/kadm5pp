@@ -40,7 +40,7 @@
 
 // Kerberos
 #include <krb5.h>
-#include <heimdal/kadm5/admin.h>
+#include <kadm5/admin.h>
 
 // Local
 #include "Context.hpp"
@@ -279,8 +279,6 @@ shared_ptr<kadm5_principal_ent_rec> copy_kadm5_principal_ent(
 	
 	pcopy->policy = new char[strlen(pp->policy) + 1];
 	strcpy(pp->policy, pcopy->policy);
-	
-	// TODO Copy tl_data and key_data aswell.
 	
 	return pcopy;
 }

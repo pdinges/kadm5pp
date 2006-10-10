@@ -41,7 +41,7 @@
 
 // Kerberos
 #include <krb5.h>
-#include <heimdal/kadm5/admin.h>
+#include <kadm5/admin.h>
 
 namespace kadm5
 {
@@ -63,7 +63,7 @@ using std::string;
  * A concrete implementation, e.g. PasswordContext may be used as follows:
  * \code
  * PasswordContext pc(...);
- * u_int32_t p;
+ * u_int32_t privs;
  * 
  * // Use instance pc instead of a KAdmin server handle (of type void*).
  * kadm5_get_privs(pc, &privs);
@@ -229,6 +229,8 @@ void delete_krb5_principal(shared_ptr<const Context> pc, krb5_principal pp);
 
 /**
  * Creates a deep copy of the given <code>kadm5_principal_ent_t</code>.
+ * 
+ * \todo	Copy tl_data and key_data fields aswell.
  * 
  * \param	pc	Smart pointer to the Context the
  * 			<code>kadm5_principal_ent_t</code> should be created
