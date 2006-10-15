@@ -58,7 +58,7 @@ using std::string;
  * For convenience, this class provides implicit conversion functions to
  * (pointers to) the context structures <code>krb5_context</code> and
  * <code>void*</code>. Therefore, instances may be used as drop-in
- * replacements to the libraries' functions' required context pointers.
+ * replacements to the libraries' functions required context pointers.
  * 
  * A concrete implementation, e.g. PasswordContext may be used as follows:
  * \code

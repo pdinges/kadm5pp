@@ -118,7 +118,7 @@ public:
 	 * try {
 	 * 	kadm5::Error::throw_on_error( kadm5_get_privs(c, &p) );
 	 * }
-	 * catch (UnknownPrincipalError& e) {
+	 * catch (unknown_principal& e) {
 	 * 	...
 	 * }
 	 * \endcode

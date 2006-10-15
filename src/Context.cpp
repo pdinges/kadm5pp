@@ -201,7 +201,7 @@ shared_ptr<kadm5_config_params> create_config_params(
 )
 {
 	KADM5_DEBUG("create_config_params()\n");
-	// Ensure kadm5_config_params structure is deleted properly.
+	// Ensure kadm5_config_params structure will be deleted properly.
 	shared_ptr<kadm5_config_params> pret(
 		new kadm5_config_params, delete_config_params
 	);
