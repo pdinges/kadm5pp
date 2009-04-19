@@ -1,0 +1,2 @@
+See MIT Kerberos5 distribution for API documentation
+(http://web.mit.edu/Kerberos/).  Heimdal docs are rather incomplete.
