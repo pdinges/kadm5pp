@@ -75,8 +75,8 @@ struct CharClass {
 
 /**
  * Generates a random password from the given list of character classes.
- * The resulting password's length will be the sum of all character classes'
- * frequencies.
+ * The resulting password's length will be the sum of the frequencies for all
+ * character classes.
  * 
  * \note
  * This operation may block if the system's entropy pool is empty.

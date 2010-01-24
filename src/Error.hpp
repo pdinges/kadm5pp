@@ -47,8 +47,8 @@
 #ifdef DEBUG
 	#include <iostream>
 	/**
-	 * Helper macro to print debug messages. If <code>DEBUG</code> was not
-	 * defined on compile time, the messages will be left out.
+	 * Helper macro to print debug messages. If <code>DEBUG</code> was
+	 * undefined at compile time, the messages will be left out.
 	 * 
 	 * \param	xmsg	The <code>std::string</code> message to print.
 	 **/
@@ -74,9 +74,8 @@ using std::string;
  * number.
  * 
  * \note
- * Some exceptions may return an error code of <code>0</code> if their class
- * does not correspond to a library error. (An example for this is
- * AlreadyExists).
+ * Some exceptions may return error code <code>0</code> if their class does not
+ * correspond to a library error. (An example for this is AlreadyExists).
  * 
  * Also, a convenience function throw_on_error() is provided to wrap library
  * function calls. It will throw an appropriate exception if an error code
@@ -86,7 +85,7 @@ class error: public std::exception
 {
 public:
 	/**
-	 * Constructs a new instance with the given error code.
+	 * Create a new instance with the given error code.
 	 * 
 	 * \param	c	The error's number as defined in <krb5_err.h>
 	 * 			or <kadm5/kadm5_err.h>.
@@ -107,8 +106,9 @@ public:
 	 * an appropriate exception if an error code was returned.
 	 * 
 	 * \note
-	 * Both, <code>krb5_error_code</code> and <code>kadm5_ret_t</code> are
-	 * <code>typedef</code>s of <code>u_int32_t</code>.
+	 * Both return types, <code>krb5_error_code</code> and
+	 * <code>kadm5_ret_t</code>, are <code>typedef</code>s of
+	 * <code>u_int32_t</code>.
 	 * 
 	 * Usage example:
 	 * \code

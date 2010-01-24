@@ -64,20 +64,20 @@ public:
 	 * 
 	 * \param	ccname	Use credentials from this cache. The name may
 	 * 			be a filename or any other valid identifier
-	 * 			of form <code>TYPE:ID</code> understood by the
-	 * 			libraries. If <code>TYPE:</code> is omitted,
+	 * 			of form <code>TYPE:ID</code> that the libraries
+	 * 			understand. If <code>TYPE:</code> is omitted,
 	 * 			<code>FILE:</code> is assumed.
-	 * \param	realm	The Kerberos realm for this context (will be
-	 * 			used as default for all principals if no
-	 * 			realm was specified).
+	 * \param	realm	The Kerberos realm for this context. It will be
+	 * 			used as default for all principals without
+	 * 			specified realm.
 	 * 			If empty, the default realm will be used.
-	 * \param	host	The KAdmin server's hostname to connect to.
-	 * 			If empty, the used realm's
-	 * 			<code>admin_server</code> config parameter
-	 * 			will be used.
+	 * \param	host	Hostname of the KAdmin server to which to
+	 *			connect.
+	 * 			If empty, defaults to the used realm's
+	 * 			<code>admin_server</code> config parameter.
 	 * \param	port	The KAdmin server's port number.
-	 * 			If <code>0</code>, use the libraries' default
-	 * 			port number.
+	 * 			If <code>0</code>, the libraries' default
+	 * 			port number is used.
 	 **/
 	explicit CCacheContext(
 		const string& ccname,

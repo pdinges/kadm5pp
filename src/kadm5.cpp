@@ -101,43 +101,6 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(
 	0, 1
 );
 
-/*
- * Exceptions
- */
-
-
-
-//static py::handle<> error_type;
-
-//static py::object Foo;
-////static py::object Bar;
-////void translator(const kadm5::Error& e) {
-////    PyErr_SetString(Bar.ptr(), "I'm sorry Dave...");
-////}
-//
-//void translator(const kadm5::error& e)
-//{
-////	static py::object py_exception_class((
-////		py::handle<>(py::borrowed(PyExc_EOFError))
-////	));
-// 
-////	PyErr_SetString(py_exception_class.ptr(), "My message"); 
-////	PyErr_SetString(Foo.ptr(), "My message");
-//
-////	static py::object py_exception_class2((
-////		py::handle<>( PyErr_NewException("kadm5.Error2", py_exception_class.ptr(), NULL) )
-////	));
-////
-////	static py::object Bar( Foo(e.error_code()) );
-////	
-////	PyErr_SetObject(py_exception_class2.ptr(), Bar.ptr());
-//
-//	py::object exception( Foo(e.error_code()) );
-//	
-//	PyErr_SetObject(exception_type.get(), exception.ptr());
-//}
-
-
 
 BOOST_PYTHON_MODULE(kadm5)
 {
@@ -163,27 +126,6 @@ BOOST_PYTHON_MODULE(kadm5)
 	
 	py::to_python_converter<ptime, ptime_to_int>();
 	py::to_python_converter<time_duration, time_duration_to_int>();
-//	
-//py::object Bar( py::class_<kadm5::Error>("Error", py::init<u_int32_t>())
-//	.def("error_code", &kadm5::Error::error_code)
-//);
-
-////py::tuple t = py::extract<py::tuple>(Bar.attr("__bases__"));
-//////t += py::make_tuple( (py::handle<>(py::borrowed(PyExc_EOFError))) );
-////
-////py::extract<py::tuple>(Bar.attr("__bases__")) = py::make_tuple(
-////	t[0],
-////	(py::handle<>(py::borrowed(PyExc_EOFError)))
-////);
-//
-//	Foo = Bar;
-
-//	error_type( PyErr_NewException("kadm5.Error", NULL, NULL) );
-//	py::handle<> module_dict( PyModule_GetDict(
-
-
-	
-//	py::register_exception_translator<kadm5::Error>(translator);
 	
 	
 	/*

@@ -55,23 +55,22 @@ class PasswordContext : public Context
 {
 public:
 	/**
-	 * Constructs a new PasswordContext with the given connection data.
+	 * Constructs a new PasswordContext from the given connection data.
 	 * 
 	 * \param	password	Connect to the KAdmin server using
 	 * 			this password.
-	 * \param	client	The principal we identify ourselves as to the
-	 * 			KAdmin server. If empty, the Kerberos
-	 * 			libraries' default value will be used.
-	 * \param	realm	The Kerberos realm for this context (will be
-	 * 			used as default for all principals if no
-	 * 			realm was specified).
-	 * 			If empty, the default realm will be used.
-	 * \param	host	The KAdmin server's hostname to connect to.
-	 * 			If empty, the used realm's
-	 * 			<code>admin_server</code> config parameter
-	 * 			will be used.
+	 * \param	client	The name of the Kerberos principal to
+	 * 			authenticate as. If missing, the libraries'
+	 * 			default value will be used.
+	 * \param	realm	The realm to assume if this part of a
+	 * 			Principal's name is omitted. If missing,
+	 * 			the libraries' default value will be used.
+	 * \param	host	Hostname of the KAdmin server to connect to.
+	 * 			If missing, defaults to the
+	 * 			<code>admin_server</code> parameter in the
+	 * 			Kerberos configuration.
 	 * \param	port	The KAdmin server's port number.
-	 * 			If <code>0</code>, use the libraries' default
+	 * 			If <code>0</code>, uses the libraries' default
 	 * 			port number.
 	 **/
 	explicit PasswordContext(

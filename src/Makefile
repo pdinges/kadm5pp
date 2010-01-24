@@ -8,7 +8,7 @@ kadm5.so: $(objects)
 	g++ -shared $^ -fPIC -o $@ -lkrb5 -lkadm5clnt -lboost_date_time -lboost_python
 
 kadm5.o: kadm5.cpp
-	g++ -c -fPIC -I/usr/include/python2.4/ -o $@ $<
+	g++ -c -fPIC $(python-config --includes) -o $@ $<
 
 random_device.o: random_device.cpp
 	g++ -c -fPIC -o $@ $<

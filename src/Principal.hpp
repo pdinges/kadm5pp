@@ -60,14 +60,14 @@ class Context;
  * Represents a Principal in the Kerberos database.
  * 
  * This class should be your main interface to modify the Kerberos database.
- * Together with the Connection class, all operations that can be performed
- * through the <code>kadmin</code> commandline program may also be achieved
- * using these classes. Single exception is the (local) database dump.
+ * Together with the Connection class, all operations available in the
+ * <code>kadmin</code> commandline program may also be performed using these
+ * classes. Single exception is the (local) database dump.
  * 
  * To reduce network load, data will be fetched from the server only if needed.
  * 
- * Any changes made will be invisible to the server until
- * commit_modifications() is executed.
+ * Any changes will be invisible to the server until commit_modifications()
+ * is called.
  * 
  * Passwords will be wiped from memory after successful transmission to the
  * server.
@@ -101,8 +101,8 @@ public:
 	 * Maybe make this constructor private and a friend of Connection to
 	 * prevent its usage?
 	 * 
-	 * \param	context	The Context the new Principal belongs to.
-	 * \param	id	The unique name, this Principal is known as in
+	 * \param	context	The Context to which the new Principal belongs.
+	 * \param	id	The unique name this Principal is known as in
 	 * 			the Kerberos database. If the realm part is
 	 * 			omitted, Context::realm() will be used.
 	 * \param	password	The password for Principals not yet
@@ -121,7 +121,7 @@ public:
 	
 	/**
 	 * Copy constructor. Produces a deep (complete) copy of the given
-	 * Principapl.
+	 * Principal.
 	 * 
 	 * \param	p	The Principal to copy.
 	 **/
@@ -135,10 +135,10 @@ public:
 
 	///@{\name Kerberos Database Functions
 	/**
-	 * Check if this Principal exists in the Kerberos database (and hence
-	 * was loaded from there) or if it was created from scratch.
+	 * Check whether this Principal exists in the Kerberos database (and
+	 * hence was loaded from there) or whether it was created from scratch.
 	 * 
-	 * \return	true, if this Principal represents an existing entry in
+	 * \return	true if this Principal represents an existing entry in
 	 * 		the Kerberos database.
 	 **/
 	const bool exists_on_server() const;
@@ -147,9 +147,9 @@ public:
 	 * Test whether this Principal's data differs from the values saved in
 	 * the Kerberos database.
 	 * 
-	 * \return	True, if attributes were modified after they were
-	 * 		fetched from the server or if this is a new Principal.
-	 * 		False otherwise.
+	 * \return	true if attributes were modified after they were
+	 * 		fetched from the server, or if this is a new Principal.
+	 * 		Otherwise false.
 	 **/
 	const bool modified() const;
 	
@@ -161,7 +161,7 @@ public:
 
 	
 	/**
-	 * Get the name, this Principal is currently known as to the server
+	 * Get the name, under which the server currently knows this Principal
 	 * (if it exists_on_server()).
 	 * 
 	 * \return	The Principal's unique name in the Kerberos Database.
@@ -173,8 +173,8 @@ public:
 	 * 
 	 * \note
 	 * This may differ from id() as it can be changed with set_name().
-	 * commit_modifications() triggers a rename and hence afterwards,
-	 * there's always <code>id() == name()</code>.
+	 * commit_modifications() triggers a rename. Hence, after commiting
+	 * we always have <code>id() == name()</code>.
 	 * 
 	 * \return	The Principal's name.
 	 **/
@@ -204,7 +204,7 @@ public:
 	 * 
 	 * \note
 	 * There is no way to retrieve the password, effectively making this
-	 * Principal unusable. If you want to set a random password you
+	 * Principal unusable. If you want to set a random password that you
 	 * know, use set_password() with random_password().
 	 * 
 	 * \code
@@ -228,7 +228,7 @@ public:
 	
 	/**
 	 * Get the expiration date. After this date, the Principal will be
-	 * unable to authenticate (e.g. log in).
+	 * unable to authenticate (e.g., log in).
 	 * 
 	 * \return	The expiration date. This may be
 	 * 		<code>boost::posix_time::pos_infin</code> if the
@@ -242,7 +242,7 @@ public:
 	 * \param	t	The new date on which the Principal will
 	 * 			expire.	Use
 	 * 			<code>boost::posix_time::pos_infin</code> to
-	 * 			have the Principal never expire.
+	 * 			make the Principal never expire.
 	 **/
 	void set_expire_time(const ptime& t);
 	
@@ -261,7 +261,7 @@ public:
 	 * 
 	 * \param	t	The new date on which the password will expire.
 	 * 			Use <code>boost::posix_time::pos_infin</code>
-	 * 			to have the password never expire.
+	 * 			to make the password never expire.
 	 **/
 	void set_password_expiration(const ptime& t);
 	
@@ -287,10 +287,10 @@ public:
 	void set_max_lifetime(const time_duration& d);
 
 	/**
-	 * Get the maximum lifetime in which the Principal may renew held
+	 * Get the longest timespan in which the Principal may renew held
 	 * tickets.
 	 * 
-	 * \return	The maximum time for ticket renewal. This may be
+	 * \return	The maximum timespan for ticket renewal. This may be
 	 * 		<code>boost::posix_time::pos_infin</code> if the
 	 * 		ticket supports unlimited lifetime.
 	 * 		(Be careful with such tickets! They are a major
@@ -299,7 +299,7 @@ public:
 	const time_duration max_renewable_lifetime() const;
 	
 	/**
-	 * Set the new lifetime in which the Principal may renew held tickets.
+	 * Set the new timespan in which the Principal may renew held tickets.
 	 * 
 	 * \param	d	The new maximum ticket renewing lifetime.
 	 * 			Use <code>boost::posix_time::pos_infin</code>
@@ -315,13 +315,13 @@ public:
 //	void setPolicy(Policy*);
 
 	/**
-	 * Get the Principal who modified this (the current) Principal's
-	 * database entry last. If the current Principal does not yet exist in
-	 * the server database (is freshly created), Context::client() will be
-	 * used.
+	 * Get the Principal who last modified this (the current) Principal's
+	 * database entry. If the current Principal does not yet exist in
+	 * the server database (that is, was just created), Context::client()
+	 * will be used.
 	 * 
-	 * \return	The Principal who modified the this Principal's
-	 * 		database entry last. Context::client() if this
+	 * \return	The Principal who last modified the this Principal's
+	 * 		database entry. Defaults to Context::client() if this
 	 * 		Principal was not yet created on the server.
 	 **/
 	shared_ptr<Principal> modifier() const;
@@ -330,7 +330,7 @@ public:
 	 * Get the latest date on which the Principal's database entry was
 	 * modified.
 	 * 
-	 * \return	The latest date, on which the Principal's database
+	 * \return	The latest date on which the Principal's database
 	 * 		entry was modified. This may be 
 	 * 		<code>boost::posix_time::neg_infin</code> if it has
 	 * 		never been modified.
@@ -342,17 +342,18 @@ public:
 	 * in the database.
 	 * 
 	 * \note
-	 * This will return meaningful values only if the KAdmin server
-	 * supports writing back this information into the database.
-	 * (Compile-time setting.)
+	 * This method will return meaningful values only if the KAdmin server
+	 * supports writing back the information into the database.
+	 * (Support for storing the password change date is a Kerberos
+	 * compile-time setting.)
 	 * 
 	 * \todo
 	 * Check if this <em>really</em> depends on a compile-time setting.
 	 * 
-	 * \return	The latest date, on which the Principal's password
+	 * \return	The latest date on which the Principal's password
 	 * 		was changed in the database. This may be 
 	 * 		<code>boost::posix_time::neg_infin</code> if it has
-	 * 		never been changed or if the server does not support
+	 * 		never been changed, or if the server does not store
 	 * 		this information.
 	 **/
 	const ptime last_password_change() const;
@@ -362,14 +363,15 @@ public:
 	 * authenticated to the KDC.
 	 * 
 	 * \note
-	 * This will return meaningful values only if the KDC server
-	 * supports writing back this information into the database.
-	 * (Compile-time setting.)
+	 * This method will return meaningful values only if the KDC server
+	 * supports writing back the information into the database.
+	 * (Support for storing the last authentication date is a Kerberos
+	 * compile-time setting.)
 	 * 
-	 * \return	The latest date, on which the Principal successfully
+	 * \return	The latest date on which the Principal successfully
 	 * 		authenticated to the KDC. This may be 
 	 * 		<code>boost::posix_time::neg_infin</code> if that has
-	 * 		never been the case or if the server does not support
+	 * 		never been the case, or if the server does not store
 	 * 		this information.
 	 **/
 	const ptime last_success() const;
@@ -379,14 +381,15 @@ public:
 	 * to the KDC.
 	 * 
 	 * \note
-	 * This will return meaningful values only if the KDC server
-	 * supports writing back this information into the database.
-	 * (Compile-time setting.)
-	 * 
-	 * \return	The latest date, on which the Principal failed to
+	 * This method will return meaningful values only if the KDC server
+	 * supports writing back the information into the database.
+	 * (Support for storing the last failed authentication date is a
+	 * Kerberos compile-time setting.)
+	 *
+	 * \return	The latest date on which the Principal failed to
 	 * 		authenticate to the KDC. This may be 
 	 * 		<code>boost::posix_time::neg_infin</code> if that has
-	 * 		never been the case or if the server does not support
+	 * 		never been the case, or if the server does not store
 	 * 		this information.
 	 **/
 	const ptime last_failed() const;
@@ -406,7 +409,7 @@ private:
 	
 	/**
 	 * Fetch the Principal's entry (identified by id()) from the Kerberos
-	 * database if it exists or use default values otherwise.
+	 * database if it exists; otherwise use default values.
 	 * 
 	 * load() will check if it has been called before and do nothing in
 	 * that case. Also, it won't overwrite already changed attributes.
@@ -414,7 +417,7 @@ private:
 	void load() const;
 	
 	/**
-	 * Helper function to add a (this) new Principal entry to the Kerberos
+	 * Helper function to add a new entry for this Principal to the Kerberos
 	 * database.
 	 **/
 	void apply_create();
@@ -427,7 +430,7 @@ private:
 	
 	/**
 	 * Helper function to perform the actual modifications of the
-	 * (already existing!) Principal's database entry.
+	 * (already existing!) Principal database entry.
 	 **/
 	void apply_modify() const;
 	
@@ -439,7 +442,7 @@ private:
 	/**
 	 * Helper function to wipe the contents of the given <code>char</code>
 	 * array pointer from memory. The content will be set to all
-	 * <code>0</code>s first and then the pointer will be set to NULL,
+	 * <code>0</code>s first, and then the pointer will be set to NULL,
 	 * effectively deallocating held memory.
 	 * 
 	 * It is save to call this function with a <code>NULL</code> pointer.
