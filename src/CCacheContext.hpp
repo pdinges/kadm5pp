@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- *  Copyright (c) 2006 Peter Dinges <me@elwedgo.de>                           *
+ *  Copyright (c) 2006 Peter Dinges <pdinges@acm.org>                           *
  *  All rights reserved.                                                      *
  *                                                                            *
  *  Redistribution and use in source and binary forms, with or without        *
@@ -29,7 +29,7 @@
  *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.         *
  *                                                                            *
  *****************************************************************************/
-/* $Id$ */
+
 
 #ifndef CCACHECONTEXT_HPP_
 #define CCACHECONTEXT_HPP_
@@ -54,7 +54,7 @@ using std::string;
  * Kerberos and KAdmin Context using credentials from a cache for
  * authentication.
  * 
- * \author Peter Dinges <me@elwedgo.de>
+ * \author Peter Dinges <pdinges@acm.org>
  **/
 class CCacheContext : public Context
 {

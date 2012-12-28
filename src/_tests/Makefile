@@ -1,6 +1,6 @@
-# $Id$
 #
 # Use local kerberos configuration so we won't interfere with the system config
+#
 export KRB5_CONFIG=./data/krb5.conf
 test-objects := $(patsubst %.cpp,%.o,$(shell ls *Test.cpp))
 objects := $(patsubst %Test.o,../%.o,$(test-objects))
@@ -14,7 +14,7 @@ main: main.o $(test-objects) $(objects) ../Error.o
 # Rely on parent-directories' Makefile for non-test object creation
 ../%.o:
 	cd ..; make $(patsubst ../%.o,%.o,$@)
-	
+
 %.o: %.cpp %.hpp
 	g++ -c -o $@ $<
 

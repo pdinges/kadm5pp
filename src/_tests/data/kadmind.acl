@@ -1,4 +1,2 @@
-# $Id$
-#
 #principal       [priv1,priv2,...]       [glob-pattern]
 user/admin	all

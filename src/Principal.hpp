@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- *  Copyright (c) 2006 Peter Dinges <me@elwedgo.de>                           *
+ *  Copyright (c) 2006 Peter Dinges <pdinges@acm.org>                           *
  *  All rights reserved.                                                      *
  *                                                                            *
  *  Redistribution and use in source and binary forms, with or without        *
@@ -29,7 +29,7 @@
  *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.         *
  *                                                                            *
  *****************************************************************************/
-/* $Id$ */
+
 
 #ifndef PRINCIPAL_H_
 #define PRINCIPAL_H_
@@ -82,7 +82,7 @@ class Context;
  * pp->commit_modifications();	// make changes visible
  * \endcode
  * 
- * \author Peter Dinges <me@elwedgo.de>
+ * \author Peter Dinges <pdinges@acm.org>
  **/
 class Principal
 {
