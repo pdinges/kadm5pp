@@ -1,0 +1,3 @@
+<map id="kadm5::CCacheContext" name="kadm5::CCacheContext">
+<area shape="rect" id="node2" href="$classkadm5_1_1Context.html" title="Abstract RAII base class for holding pointers to Kerberos and KAdmin context information. Resource pointers will be initialized and deleted automatically." alt="" coords="27,5,141,32"/>
+</map>
